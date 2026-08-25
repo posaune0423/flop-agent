@@ -1,0 +1,5 @@
+.flop-agent/
+.env
+*.pem
+*private-key*.json
+

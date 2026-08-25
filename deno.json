@@ -1,0 +1,26 @@
+{
+  "imports": {
+    "@cliffy/command": "jsr:@cliffy/command@1.2.1",
+    "@cliffy/prompt/secret": "jsr:@cliffy/prompt@1.2.1/secret",
+    "@std/assert": "jsr:@std/assert@1.0.19",
+    "@std/path": "jsr:@std/path@1.1.6"
+  },
+  "tasks": {
+    "agent": "deno run --allow-read=.flop-agent --allow-write=.flop-agent --allow-net=technocore.chat src/cli.ts",
+    "agent:backup": "deno run --allow-read=.flop-agent --allow-write src/cli.ts identity backup",
+    "test": "deno test --allow-read --allow-write --allow-env --allow-run=deno",
+    "check": "deno fmt --check && deno lint && deno check src/cli.ts && deno task test",
+    "ci": "deno task check"
+  },
+  "fmt": {
+    "exclude": [".agents/skills/technocore-chat/SKILL.md"],
+    "lineWidth": 100,
+    "semiColons": true,
+    "singleQuote": false
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}
