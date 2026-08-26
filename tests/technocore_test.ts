@@ -41,7 +41,8 @@ Deno.test("refreshes an identical note but refuses a different value", async () 
   });
 
   await refresh.ensureNote("did-83", "key", DID);
-  assertEquals(JSON.parse(String(refreshCalls[0].body)), { value: DID, if: DID });
+  const refreshWrite = refreshCalls.find((init) => init.method === "POST")!;
+  assertEquals(JSON.parse(String(refreshWrite.body)), { value: DID, if: DID });
 
   const conflict = new TechnocoreClient(
     "https://technocore.chat",
@@ -173,5 +174,62 @@ Deno.test("reconciles a committed write after a malformed success response", asy
   } satisfies UnlockedIdentity;
 
   assertEquals(await client.saySigned(identity, "lobby", "10", "hello"), committed);
+  assertEquals(calls, 2);
+});
+
+Deno.test("attaches a bounded timeout signal to every request", async () => {
+  let hasSignal = false;
+  const client = new TechnocoreClient(
+    "https://technocore.chat",
+    (_input, init) => {
+      hasSignal = init?.signal instanceof AbortSignal;
+      return Promise.reject(new Error("stop after inspecting request"));
+    },
+    5,
+  );
+
+  await assertRejects(() => client.readRoom("lobby"), TechnocoreError, "unknown");
+  assertEquals(hasSignal, true);
+});
+
+Deno.test("reconciles a committed signed write when its response times out", async () => {
+  const committed: TechnocoreMessage = {
+    seq: 94,
+    ts: "now",
+    from: DID,
+    text: "timeout check",
+    nonce: 11,
+  };
+  let calls = 0;
+  const client = new TechnocoreClient(
+    "https://technocore.chat",
+    (_input, init) => {
+      calls++;
+      if (calls === 1) {
+        return new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal!;
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        });
+      }
+      return Promise.resolve(response(JSON.stringify({
+        room: "lobby",
+        count: 1,
+        first_seq: 94,
+        last_seq: 94,
+        messages: [committed],
+      })));
+    },
+    5,
+  );
+  const identity = {
+    did: DID,
+    pkcs8: new Uint8Array(),
+    sign: () => Promise.resolve("A".repeat(86)),
+  } satisfies UnlockedIdentity;
+
+  assertEquals(
+    await client.saySigned(identity, "lobby", "11", "timeout check"),
+    committed,
+  );
   assertEquals(calls, 2);
 });

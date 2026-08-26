@@ -40,10 +40,17 @@ export interface RoomView {
 export class TechnocoreClient {
   readonly baseUrl: string;
 
-  constructor(baseUrl: string, readonly fetcher: typeof fetch = fetch) {
+  constructor(
+    baseUrl: string,
+    readonly fetcher: typeof fetch = fetch,
+    readonly requestTimeoutMs = 15_000,
+  ) {
     const parsed = new URL(baseUrl);
     if (!/^https?:$/.test(parsed.protocol) || parsed.pathname !== "/") {
       throw new Error("Technocore base URL must be an HTTP(S) origin");
+    }
+    if (!Number.isFinite(requestTimeoutMs) || requestTimeoutMs <= 0) {
+      throw new Error("request timeout must be positive");
     }
     this.baseUrl = parsed.origin;
   }
@@ -157,6 +164,7 @@ export class TechnocoreClient {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(this.requestTimeoutMs),
       });
     } catch (error) {
       const reconciled = await this.findMessage(room, identity.did, nonce, swept);
@@ -209,7 +217,10 @@ export class TechnocoreClient {
 
   private async fetchKnown(input: string, init?: RequestInit): Promise<Response> {
     try {
-      return await this.fetcher(input, init);
+      return await this.fetcher(input, {
+        ...init,
+        signal: init?.signal ?? AbortSignal.timeout(this.requestTimeoutMs),
+      });
     } catch (error) {
       throw new TechnocoreError(
         "Technocore transport result is unknown",
