@@ -7,7 +7,7 @@
   },
   "tasks": {
     "agent": "deno run --allow-read=.flop-agent --allow-write=.flop-agent --allow-net=technocore.chat src/cli.ts",
-    "agent:backup": "deno run --allow-read=.flop-agent --allow-write src/cli.ts identity backup",
+    "agent:backup": "deno run --allow-read --allow-write src/cli.ts identity backup",
     "test": "deno test --allow-read --allow-write --allow-env --allow-run=deno",
     "check": "deno fmt --check && deno lint && deno check src/cli.ts && deno task test",
     "ci": "deno task check"

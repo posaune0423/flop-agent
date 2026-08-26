@@ -23,3 +23,11 @@ Deno.test("shares one canonical agents tree across supported coding agents", asy
   }
   assertEquals(await Deno.readLink(`${root}/CLAUDE.md`), "AGENTS.md");
 });
+
+Deno.test("backup task can inspect an arbitrary absolute output directory", async () => {
+  const config = JSON.parse(await Deno.readTextFile(`${root}/deno.json`));
+  const command = String(config.tasks["agent:backup"]);
+
+  assertEquals(command.includes("--allow-read "), true);
+  assertEquals(command.includes("--allow-write "), true);
+});
