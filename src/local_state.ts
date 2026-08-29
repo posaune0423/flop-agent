@@ -27,7 +27,9 @@ export class LocalStateStore {
 
   async createIdentity(envelope: IdentityEnvelope): Promise<void> {
     if (await lstatOrNull(`${this.root}/identity.json`)) {
-      throw new Error("legacy identity exists; run agent:migrate before identity initialization");
+      throw new Error(
+        "legacy identity exists; use a separately reviewed immutable migration artifact before identity initialization",
+      );
     }
     const identityRoot = this.identityRoot();
     await ensurePrivateDirectory(identityRoot);

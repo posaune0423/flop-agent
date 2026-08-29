@@ -85,6 +85,54 @@ Deno.test("mutable source tasks have no protected identity capability", async ()
   for (const [name, value] of Object.entries(config.tasks)) {
     assertEquals(String(value).includes("Application Support/flop-agent"), false, name);
   }
+
+  const cli = await Deno.readTextFile(`${root}/src/cli.ts`);
+  assertEquals(cli.includes("securityMigrate"), false);
+  assertEquals(cli.includes('.command("security"'), false);
+});
+
+Deno.test("legacy migration guidance requires a separately reviewed immutable artifact", async () => {
+  const guidance = await Deno.readTextFile(`${root}/docs/SECURITY_GUARDRAILS.md`);
+  assertEquals(guidance.includes("agent:migrate"), false);
+  assertEquals(guidance.includes("separately reviewed immutable migration artifact"), true);
+  assertEquals(guidance.includes("Normal commands cannot discover or move legacy secrets"), true);
+});
+
+Deno.test("ci validates the guarded binary and launchd plist", async () => {
+  const config = JSON.parse(await Deno.readTextFile(`${root}/deno.json`));
+  const command = String(config.tasks.ci);
+  const checkIndex = command.indexOf("deno task check");
+  const compileIndex = command.indexOf("deno task guard:compile");
+
+  assertEquals(checkIndex >= 0, true);
+  assertEquals(compileIndex > checkIndex, true);
+  assertEquals(command.includes("deno task check && deno task guard:compile"), true);
+  assertEquals(command.includes("plutil"), false);
+
+  const workflow = await Deno.readTextFile(`${root}/.github/workflows/ci.yml`);
+  assertEquals(workflow.includes("runs-on: macos-latest"), true);
+  assertEquals(
+    workflow.includes(
+      "/usr/bin/plutil -lint ops/io.github.posaune0423.flop-agent.refresh.plist",
+    ),
+    true,
+  );
+});
+
+Deno.test("all Technocore clients share one production origin constant", async () => {
+  const constantPath = `${root}/src/constants/technocore.ts`;
+  assertEquals(await exists(constantPath), true);
+  const constant = await Deno.readTextFile(constantPath);
+  assertEquals(
+    constant.includes('export const TECHNOCORE_ORIGIN = "https://technocore.chat"'),
+    true,
+  );
+
+  for (const sourcePath of ["src/cli.ts", "src/guarded_refresh.ts", "src/libs/technocore.ts"]) {
+    const source = await Deno.readTextFile(`${root}/${sourcePath}`);
+    assertEquals(source.includes("TECHNOCORE_ORIGIN"), true, sourcePath);
+    assertEquals(source.includes("https://technocore.chat"), false, sourcePath);
+  }
 });
 
 Deno.test("guarded refresh source excludes identity, commands, and environment", async () => {

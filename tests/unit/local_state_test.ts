@@ -38,11 +38,12 @@ Deno.test("refuses identity initialization while a legacy identity exists", asyn
   await Deno.mkdir(root, { mode: 0o700 });
   await Deno.writeTextFile(`${root}/identity.json`, JSON.stringify(envelope), { mode: 0o600 });
 
-  await assertRejects(
+  const error = await assertRejects(
     () => new LocalStateStore(root, `${parent}/private`).createIdentity(envelope),
     Error,
-    "migrate",
+    "separately reviewed immutable migration artifact",
   );
+  assertEquals(error.message.includes("agent:migrate"), false);
   assertEquals(await exists(`${parent}/private/identity.json`), false);
 });
 

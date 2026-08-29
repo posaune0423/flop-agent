@@ -1,5 +1,6 @@
 import type { UnlockedIdentity } from "../identity.ts";
 import { canonicalRoomMessage, cleanText, validateNonce } from "../protocol.ts";
+import { TECHNOCORE_ORIGIN } from "../constants/technocore.ts";
 
 export type TechnocoreErrorKind =
   | "bad_request"
@@ -46,7 +47,7 @@ export class TechnocoreClient {
     readonly requestTimeoutMs = 15_000,
   ) {
     const parsed = new URL(baseUrl);
-    if (parsed.origin !== "https://technocore.chat" || parsed.pathname !== "/") {
+    if (parsed.origin !== TECHNOCORE_ORIGIN || parsed.pathname !== "/") {
       throw new Error("Technocore base URL must be the exact production HTTPS origin");
     }
     if (!Number.isFinite(requestTimeoutMs) || requestTimeoutMs <= 0) {

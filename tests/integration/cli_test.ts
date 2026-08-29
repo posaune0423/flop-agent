@@ -6,7 +6,7 @@ import { makeTestDir } from "../unit/test_temp.ts";
 Deno.test("documents the stable CLI command groups", () => {
   assertEquals(
     buildCli().getCommands().map((command) => command.getName()),
-    ["identity", "task", "inbox", "security"],
+    ["identity", "task", "inbox"],
   );
 });
 

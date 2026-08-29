@@ -1,7 +1,6 @@
 export const APPROVED_ONBOARDING_PLAN_HASH =
   "da3c27957b0f7e03e1f5d35f7f9623c739f8e7cfcec2f414890a16812b85749e";
 
-export const APPROVED_ORIGIN = "https://technocore.chat";
 export const GUARDED_RUNTIME_ROOT = "/var/db/flop-agent-refresh";
 export const MIN_REFRESH_INTERVAL_MS = 5 * 24 * 60 * 60 * 1_000;
 export const GUARDED_RECEIPT_ID = "technocore-refresh-guarded";

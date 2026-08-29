@@ -18,3 +18,10 @@ jobs:
         with:
           deno-version: v2.9.5
       - run: deno task ci
+
+  plist:
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: /usr/bin/plutil -lint ops/io.github.posaune0423.flop-agent.refresh.plist

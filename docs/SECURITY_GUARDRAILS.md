@@ -26,8 +26,9 @@ runtime, and OS capabilities outside LLM inference.
 - Runtime directories are `0700`; state and lock files are `0600`.
 - Existing paths are checked with `lstat`; symlinks, non-regular files, wrong owner, group/other
   permissions, and multiple hard links fail closed.
-- Migration is an explicit `deno task agent:migrate` operation. Normal commands cannot discover or
-  move legacy secrets.
+- Legacy migration requires a separately reviewed immutable migration artifact and a
+  human-controlled installation procedure. This repository does not currently supply that artifact.
+  Normal commands cannot discover or move legacy secrets.
 
 ### Split Deno capabilities
 

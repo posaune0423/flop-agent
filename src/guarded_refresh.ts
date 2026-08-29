@@ -1,11 +1,11 @@
 import {
   APPROVED_NOTES,
   APPROVED_ONBOARDING_PLAN_HASH,
-  APPROVED_ORIGIN,
   GUARDED_RECEIPT_ID,
   GUARDED_RUNTIME_ROOT,
   MIN_REFRESH_INTERVAL_MS,
 } from "./constants/guarded_refresh.ts";
+import { TECHNOCORE_ORIGIN } from "./constants/technocore.ts";
 import { type AgentState, LocalStateStore } from "./local_state.ts";
 import type { OnboardPlan } from "./tasks/onboard.ts";
 import { TechnocoreClient } from "./libs/technocore.ts";
@@ -103,7 +103,7 @@ function approvedPlanFromState(state: AgentState): OnboardPlan {
 }
 
 async function validateApprovedPlan(plan: OnboardPlan): Promise<void> {
-  if (plan.planHash !== APPROVED_ONBOARDING_PLAN_HASH || plan.baseUrl !== APPROVED_ORIGIN) {
+  if (plan.planHash !== APPROVED_ONBOARDING_PLAN_HASH || plan.baseUrl !== TECHNOCORE_ORIGIN) {
     throw new Error("plan does not match the approved guarded refresh policy");
   }
   const { planHash: _planHash, ...payload } = plan;
@@ -135,7 +135,7 @@ if (import.meta.main) {
     const store = new LocalStateStore(GUARDED_RUNTIME_ROOT, undefined, false);
     const result = await guardedRefresh({
       store,
-      client: new TechnocoreClient(APPROVED_ORIGIN),
+      client: new TechnocoreClient(TECHNOCORE_ORIGIN),
       now: Date.now,
     });
     console.log(JSON.stringify(result));

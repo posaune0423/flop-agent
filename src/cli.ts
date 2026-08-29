@@ -14,8 +14,9 @@ import {
 } from "./tasks/onboard.ts";
 import { knownTaskIds, taskDescription } from "./tasks/registry.ts";
 import { logger } from "./utils/logger.ts";
+import { TECHNOCORE_ORIGIN } from "./constants/technocore.ts";
 
-const DEFAULT_BASE_URL = "https://technocore.chat";
+const DEFAULT_BASE_URL = TECHNOCORE_ORIGIN;
 const DEFAULT_REPOSITORY = "https://github.com/posaune0423/flop-agent";
 const DEFAULT_SUMMARY =
   "Deno agent for signed Technocore onboarding, mailbox monitoring, and future FLOP task adapters.";
@@ -91,23 +92,13 @@ export function buildCli() {
       new Command().description("Long-poll the mailbox until interrupted.").action(inboxFollow),
     );
 
-  const security = new Command()
-    .description("Apply deterministic local storage security migrations.")
-    .command(
-      "migrate",
-      new Command()
-        .description("Move legacy identity and runtime files into separated protected roots.")
-        .action(securityMigrate),
-    );
-
   return new Command()
     .name("flop-agent")
     .version("0.1.0")
     .description("Minimal Deno FLOP task agent for Technocore.")
     .command("identity", identity)
     .command("task", task)
-    .command("inbox", inbox)
-    .command("security", security);
+    .command("inbox", inbox);
 }
 
 async function identityInit(): Promise<void> {
@@ -136,11 +127,6 @@ async function identityInit(): Promise<void> {
 async function identityShow(): Promise<void> {
   const did = (await new LocalStateStore().readIdentity()).did;
   printJson({ did, fingerprint: await fingerprintDid(did) });
-}
-
-async function securityMigrate(): Promise<void> {
-  const result = await new LocalStateStore(".flop-agent", undefined, true).migrateLegacyLayout();
-  printJson({ migrated: true, ...result });
 }
 
 function taskList(): void {
