@@ -24,6 +24,25 @@ Deno.test("shares one canonical agents tree across supported coding agents", asy
   assertEquals(await Deno.readLink(`${root}/CLAUDE.md`), "AGENTS.md");
 });
 
+Deno.test("agents load the structure ownership contract", async () => {
+  const agents = await Deno.readTextFile(`${root}/AGENTS.md`);
+  const structure = await Deno.readTextFile(`${root}/docs/STRUCTURE.md`);
+
+  assertEquals(agents.includes("Read `docs/STRUCTURE.md`"), true);
+  for (
+    const section of [
+      "## Overview",
+      "## Directory layout",
+      "## Source ownership",
+      "## Runtime flows",
+      "## Dependency and capability rules",
+      "## Where changes go",
+    ]
+  ) {
+    assertEquals(structure.includes(section), true, section);
+  }
+});
+
 Deno.test("mutable source tasks have no protected identity capability", async () => {
   const config = JSON.parse(await Deno.readTextFile(`${root}/deno.json`));
   for (
