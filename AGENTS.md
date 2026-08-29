@@ -50,8 +50,9 @@ statically reviewed future FLOP task adapters.
 - The encrypted identity lives outside the checkout at
   `~/Library/Application Support/flop-agent/identity.json`. Runtime state lives under
   `.flop-agent/runtime`; never co-locate them again.
-- Mutable-source `deno task` commands have no secret or network capability. Never add one, and never
-  replace a path-scoped permission with a bare `--allow-*`, `-A`, or `--allow-run`.
+- Mutable-source `deno task` commands have no secret or network capability. `LOG_LEVEL` is the only
+  allowed environment variable and must stay validated by `@t3-oss/env-core`; never replace a scoped
+  permission with a bare `--allow-*`, `-A`, or `--allow-run`.
 - Scheduled refresh authority is the compiled `src/guarded_refresh.ts` artifact. It accepts no task
   argument and is bound to one origin, one plan hash, and two note hashes. Mutable repository source
   must never be the installed scheduler target.
@@ -61,8 +62,8 @@ statically reviewed future FLOP task adapters.
   reviewed immutable helper or signer service. Never retrieve the Keychain passphrase, unlock
   identity, or pass signing authority from an LLM or scheduled process.
 - Run tests with `deno task test`; its permissions are deliberately limited to repository reads,
-  `.test-tmp` writes, and UID metadata. Do not add subprocess, environment, network, or host-wide
-  filesystem permissions to make a test convenient.
+  `.test-tmp` writes, `LOG_LEVEL`, and UID metadata. Do not add subprocess, other environment,
+  network, or host-wide filesystem permissions to make a test convenient.
 
 ## Development
 

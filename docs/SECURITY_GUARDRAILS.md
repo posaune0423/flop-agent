@@ -31,13 +31,13 @@ runtime, and OS capabilities outside LLM inference.
 
 ### Split Deno capabilities
 
-The generic `deno task agent` has no host permissions. No task that runs mutable checkout source has
-identity, Keychain, environment, network, or subprocess capability. Identity creation, inspection,
-backup, migration, onboarding, status, inbox, and refresh require separately reviewed immutable
-artifacts; only guarded refresh currently has one.
+The generic `deno task agent` has only the non-secret `LOG_LEVEL` environment capability. No task
+that runs mutable checkout source has identity, Keychain, other environment, network, or subprocess
+capability. Identity creation, inspection, backup, migration, onboarding, status, inbox, and refresh
+require separately reviewed immutable artifacts; only guarded refresh currently has one.
 
-Tests have repository read, `.test-tmp` write, and UID metadata only. They have no environment,
-network, subprocess, FFI, or host-wide filesystem capability.
+Tests have repository read, `.test-tmp` write, validated `LOG_LEVEL`, and UID metadata only. They
+have no other environment, network, subprocess, FFI, or host-wide filesystem capability.
 
 ### Key material lifetime
 

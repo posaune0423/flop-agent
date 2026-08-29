@@ -34,6 +34,13 @@ contribution content hash to the DID.
 
 No Python or Node runtime is required.
 
+## Environment variables
+
+Environment variables are declared and validated in `src/env.ts` with `@t3-oss/env-core` and Zod.
+Only `LOG_LEVEL` is allowed for mutable-source tasks; it accepts `ERROR`, `WARN`, `LOG`, `INFO`, or
+`DEBUG` and defaults to `INFO`. Secrets and identity passphrases must never be environment
+variables.
+
 ## Identity and onboarding boundary
 
 The existing encrypted identity has been moved outside the checkout and the live onboarding is

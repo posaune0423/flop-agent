@@ -15,7 +15,10 @@
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "jsr:@std/io@~0.225.3": "0.225.3",
     "jsr:@std/path@1.1.6": "1.1.6",
-    "jsr:@std/text@^1.0.19": "1.0.19"
+    "jsr:@std/semver@^1.0.8": "1.0.8",
+    "jsr:@std/text@^1.0.19": "1.0.19",
+    "jsr:@t3-oss/env-core@0.13.11": "0.13.11",
+    "npm:zod@4.4.3": "4.4.3"
   },
   "jsr": {
     "@cliffy/ansi@1.2.1": {
@@ -33,6 +36,7 @@
         "jsr:@cliffy/internal",
         "jsr:@cliffy/table",
         "jsr:@std/fmt",
+        "jsr:@std/semver",
         "jsr:@std/text"
       ]
     },
@@ -89,8 +93,19 @@
         "jsr:@std/internal@^1.0.14"
       ]
     },
+    "@std/semver@1.0.8": {
+      "integrity": "dc830e8b8b6a380c895d53fbfd1258dc253704ca57bbe1629ac65fd7830179b7"
+    },
     "@std/text@1.0.19": {
       "integrity": "003a0e032d360e8c3a4e0410fb792c77a66bd6553fee9d60c6ec1bce30d29223"
+    },
+    "@t3-oss/env-core@0.13.11": {
+      "integrity": "05c80b3bd0c308ee9ec64558fc1d38645e3559defb397b422375194b629e3fd4"
+    }
+  },
+  "npm": {
+    "zod@4.4.3": {
+      "integrity": "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="
     }
   },
   "workspace": {
@@ -98,7 +113,9 @@
       "jsr:@cliffy/command@1.2.1",
       "jsr:@cliffy/prompt@1.2.1",
       "jsr:@std/assert@1.0.19",
-      "jsr:@std/path@1.1.6"
+      "jsr:@std/path@1.1.6",
+      "jsr:@t3-oss/env-core@0.13.11",
+      "npm:zod@4.4.3"
     ]
   }
 }

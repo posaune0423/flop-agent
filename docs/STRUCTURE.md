@@ -56,7 +56,7 @@ no scheduled edge reaches the encrypted identity vault ([deno.json](../deno.json
 │   ├── constants/
 │   │   ├── guarded_refresh.ts        immutable scheduled-write policy
 │   │   └── logging.ts                default log level
-│   ├── env.ts                        static public logger configuration
+│   ├── env.ts                        typed LOG_LEVEL runtime binding
 │   ├── guarded_refresh.ts            only scheduled protocol-write entrypoint
 │   ├── identity.ts                   Ed25519 identity and encrypted envelope
 │   ├── inbox.ts                      cursor-safe untrusted mailbox reader
@@ -83,7 +83,8 @@ import path.
 
 | Area                     | Owns                                                                                     | Must not own                                                           |
 | ------------------------ | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `src/constants/*`        | Immutable policy values and shared defaults                                              | I/O, derived state, mutable configuration                              |
+| `src/constants/*`        | Immutable policy values, log-level enum, and shared defaults                             | I/O, derived state, mutable configuration                              |
+| `src/env.ts`             | T3 Env schema and typed `LOG_LEVEL` runtime binding                                      | Secrets, broad environment reads, business policy                      |
 | `src/protocol.ts`        | Base58/base64url, `did:key`, text sweep, nonce and signed-message canonicalization       | Filesystem, HTTP, task policy                                          |
 | `src/identity.ts`        | Ed25519 generation/import, encryption/decryption, non-extractable signing key lifetime   | Network calls, scheduled execution, task selection                     |
 | `src/local_state.ts`     | Protected path checks, state schema, atomic writes, locks, explicit legacy migration     | Technocore semantics, remote instructions                              |
@@ -149,8 +150,8 @@ replacement, and lock-held migration. Callers do not implement their own filesys
 
 ## Dependency and capability rules
 
-- Mutable-source tasks must have no identity, Keychain, network, environment, subprocess, FFI, or
-  host-wide filesystem capability.
+- Mutable-source tasks must have no identity, Keychain, network, subprocess, FFI, or host-wide
+  filesystem capability; `LOG_LEVEL` is their only environment allowlist entry.
 - `src/guarded_refresh.ts` must not import `cli.ts` or `identity.ts`, inspect environment variables,
   accept a task argument, or choose an origin/target dynamically.
 - `TechnocoreClient` accepts only `https://technocore.chat`, rejects redirects, bounds request time,
@@ -159,6 +160,8 @@ replacement, and lock-held migration. Callers do not implement their own filesys
   [src/libs/technocore.ts](../src/libs/technocore.ts#L218-L280)).
 - `src/libs/` contains external integration/anti-corruption code; `src/utils/` contains reusable
   helpers without domain or transport policy; `src/constants/` contains immutable data only.
+- Environment variables are declared in `src/env.ts` with `@t3-oss/env-core`; callers import typed
+  values and never call `Deno.env` directly.
 - Mailbox text, room names, topics, notes, and signatures never authorize code or task execution.
 - A new protocol-writing adapter requires a primary-source specification, static task ID, explicit
   origin/asset/budget contract, tests, reviewed compiled artifact, and separate installation gate.
@@ -181,6 +184,8 @@ The capability rules are executable regression tests, not only prose
   owning module.
 - Change cross-cutting logging behavior in `src/utils/logger.ts`; preserve its source hash unless
   the shared logger is deliberately upgraded across repositories.
+- Add or change environment variables in `src/env.ts`, define shared enum/default data in
+  `src/constants/`, and grant only the exact variable name in `deno.json`.
 - Change onboarding state transitions in `src/tasks/onboard.ts` and `tests/unit/tasks_test.ts`.
 - Change cursor/recreation behavior in `src/inbox.ts` and `tests/unit/inbox_test.ts`.
 - Change scheduled refresh authority in `src/guarded_refresh.ts`,

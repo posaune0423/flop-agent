@@ -115,12 +115,15 @@ Deno.test("local tests cannot spawn subprocesses or inspect host secrets", async
     assertEquals(command.includes(allowed), true, allowed);
   }
   assertEquals(command.includes("--allow-write=.test-tmp"), true);
+  assertEquals(
+    command.split(" ").filter((token) => token.startsWith("--allow-env")),
+    ["--allow-env=LOG_LEVEL"],
+  );
   for (
     const forbidden of [
       "--allow-read=.",
       "--allow-read ",
       "--allow-write ",
-      "--allow-env",
       "--allow-run",
       "--allow-net",
       "--allow-all",
@@ -178,6 +181,15 @@ Deno.test("mutable source tasks have no protocol network capability", async () =
   for (const [name, value] of Object.entries(config.tasks)) {
     if (name === "guard:compile") continue;
     assertEquals(String(value).includes("--allow-net"), false, name);
+  }
+});
+
+Deno.test("mutable source receives only the non-secret LOG_LEVEL environment variable", async () => {
+  const config = JSON.parse(await Deno.readTextFile(`${root}/deno.json`));
+  for (const [name, value] of Object.entries(config.tasks)) {
+    const envFlags = String(value).split(" ").filter((token) => token.startsWith("--allow-env"));
+    const expected = name === "agent" || name === "test" ? ["--allow-env=LOG_LEVEL"] : [];
+    assertEquals(envFlags, expected, name);
   }
 });
 
