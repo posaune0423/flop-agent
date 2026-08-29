@@ -1,12 +1,51 @@
-import { assertEquals, assertRejects } from "@std/assert";
-import type { UnlockedIdentity } from "../src/identity.ts";
-import { TechnocoreClient, TechnocoreError, type TechnocoreMessage } from "../src/technocore.ts";
+import { assertEquals, assertRejects, assertThrows } from "@std/assert";
+import type { UnlockedIdentity } from "../../src/identity.ts";
+import {
+  TechnocoreClient,
+  TechnocoreError,
+  type TechnocoreMessage,
+} from "../../src/libs/technocore.ts";
 
 const DID = "did:key:z6Mkv1o2GEgtXjFdEMfLtupcKhGRydM8V7VHzii7Uh4aHoqH";
 
 function response(body: string, status = 200, headers?: HeadersInit): Response {
   return new Response(body, { status, headers });
 }
+
+Deno.test("accepts only the exact production HTTPS origin", () => {
+  assertThrows(() => new TechnocoreClient("http://technocore.chat"), Error, "exact");
+  assertThrows(() => new TechnocoreClient("https://technocore.chat:8443"), Error, "exact");
+  assertThrows(() => new TechnocoreClient("https://example.com"), Error, "exact");
+  assertEquals(new TechnocoreClient("https://technocore.chat").baseUrl, "https://technocore.chat");
+});
+
+Deno.test("rejects redirects at the final HTTP boundary", async () => {
+  let redirect: RequestRedirect | undefined;
+  const client = new TechnocoreClient("https://technocore.chat", (_input, init) => {
+    redirect = init?.redirect;
+    return Promise.resolve(response(JSON.stringify({
+      room: "lobby",
+      count: 0,
+      first_seq: null,
+      last_seq: 0,
+      messages: [],
+    })));
+  });
+
+  await client.readRoom("lobby");
+  assertEquals(redirect, "error");
+});
+
+Deno.test("does not copy untrusted response bodies into errors", async () => {
+  const secretLikeBody = "attacker-controlled-body-must-not-be-logged";
+  const client = new TechnocoreClient(
+    "https://technocore.chat",
+    () => Promise.resolve(response(secretLikeBody, 500)),
+  );
+
+  const error = await assertRejects(() => client.readRoom("lobby"), TechnocoreError);
+  assertEquals(error.message.includes(secretLikeBody), false);
+});
 
 Deno.test("creates an absent note with CAS and verifies the readback", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
@@ -57,16 +96,18 @@ Deno.test("refreshes an identical note but refuses a different value", async () 
 
 Deno.test("signs the canonical payload and verifies the posted tuple", async () => {
   let signed = "";
+  let redirect: RequestRedirect | undefined;
   let body: Record<string, unknown> = {};
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign(message: string) {
       signed = message;
       return Promise.resolve("A".repeat(86));
     },
   } satisfies UnlockedIdentity;
   const client = new TechnocoreClient("https://technocore.chat", (_input, init) => {
+    redirect = init?.redirect;
     body = JSON.parse(String(init?.body));
     return Promise.resolve(response(JSON.stringify({
       posted: { seq: 91, ts: "2026-08-26T00:00:00Z", from: DID, text: "hello world", nonce: 7 },
@@ -77,6 +118,7 @@ Deno.test("signs the canonical payload and verifies the posted tuple", async () 
 
   assertEquals(signed, "lobby|7|hello world");
   assertEquals(body, { did: DID, sig: "A".repeat(86), nonce: "7", text: "hello world" });
+  assertEquals(redirect, "error");
   assertEquals(posted.seq, 91);
 });
 
@@ -117,7 +159,7 @@ Deno.test("reconciles a signed write after an unknown transport result", async (
   });
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign: () => Promise.resolve("A".repeat(86)),
   } satisfies UnlockedIdentity;
 
@@ -128,7 +170,7 @@ Deno.test("reconciles a signed write after an unknown transport result", async (
 Deno.test("fails closed when the server response does not match the signed tuple", async () => {
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign: () => Promise.resolve("A".repeat(86)),
   } satisfies UnlockedIdentity;
   const client = new TechnocoreClient(
@@ -169,7 +211,7 @@ Deno.test("reconciles a committed write after a malformed success response", asy
   });
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign: () => Promise.resolve("A".repeat(86)),
   } satisfies UnlockedIdentity;
 
@@ -223,7 +265,7 @@ Deno.test("reconciles a committed signed write when its response times out", asy
   );
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign: () => Promise.resolve("A".repeat(86)),
   } satisfies UnlockedIdentity;
 

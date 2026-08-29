@@ -4,18 +4,19 @@ import { createIdentity, decryptIdentity, encryptIdentity } from "./identity.ts"
 import { followInbox, readInboxOnce } from "./inbox.ts";
 import { type AgentState, LocalStateStore } from "./local_state.ts";
 import { fingerprintDid } from "./protocol.ts";
-import { TechnocoreClient, type TechnocoreMessage } from "./technocore.ts";
+import { TechnocoreClient, type TechnocoreMessage } from "./libs/technocore.ts";
 import {
   createOnboardPlan,
   type OnboardPlan,
   type OnboardReceipt,
-  refreshOnboardNotes,
   runOnboardTask,
   verifyOnboardTask,
 } from "./tasks/onboard.ts";
 import { knownTaskIds, taskDescription } from "./tasks/registry.ts";
+import { logger } from "./utils/logger.ts";
+import { TECHNOCORE_ORIGIN } from "./constants/technocore.ts";
 
-const DEFAULT_BASE_URL = "https://technocore.chat";
+const DEFAULT_BASE_URL = TECHNOCORE_ORIGIN;
 const DEFAULT_REPOSITORY = "https://github.com/posaune0423/flop-agent";
 const DEFAULT_SUMMARY =
   "Deno agent for signed Technocore onboarding, mailbox monitoring, and future FLOP task adapters.";
@@ -40,7 +41,7 @@ export function buildCli() {
         .option("-o, --output <path:string>", "Absolute backup path.", { required: true })
         .action(async ({ output }) => {
           await new LocalStateStore().backupIdentity(output);
-          console.log(`Encrypted identity backed up to ${output}`);
+          logger.info(`Encrypted identity backed up to ${output}`);
         }),
     );
 
@@ -112,9 +113,15 @@ async function identityInit(): Promise<void> {
   });
   if (passphrase !== confirmation) throw new Error("passphrases do not match");
   const identity = await createIdentity();
-  await store.createIdentity(await encryptIdentity(identity, passphrase));
-  console.log(`Created ${identity.did}`);
-  console.log("The encrypted key is in .flop-agent/identity.json; back it up before publishing.");
+  try {
+    await store.createIdentity(await encryptIdentity(identity, passphrase));
+  } finally {
+    identity.destroy();
+  }
+  logger.info(`Created ${identity.did}`);
+  logger.info(
+    "The encrypted key is in the protected application-support directory; back it up before publishing.",
+  );
 }
 
 async function identityShow(): Promise<void> {
@@ -136,24 +143,31 @@ async function taskPlan(
   },
   id: string,
 ): Promise<void> {
-  if (id === "technocore-refresh") {
-    const { plan } = await loadOnboardRecord();
-    printJson({
-      id,
-      version: 1,
-      onboardingPlanHash: plan.planHash,
-      writes: [plan.profile, plan.contribution],
-    });
-    return;
-  }
   if (id !== "technocore-onboard") throw unknownTask(id);
   if (!options.commit) throw new Error("--commit is required for technocore-onboard");
 
-  const store = new LocalStateStore();
+  printJson(await planOnboardTask(new LocalStateStore(), options as OnboardPlanOptions));
+}
+
+export interface OnboardPlanOptions {
+  agentName: string;
+  repository: string;
+  commit: string;
+  summary: string;
+  mailbox?: string;
+}
+
+export async function planOnboardTask(
+  store: LocalStateStore,
+  options: OnboardPlanOptions,
+): Promise<OnboardPlan> {
+  const taskId = "technocore-onboard";
   const envelope = await store.readIdentity();
   let plan: OnboardPlan | undefined;
   await store.updateState(async (state) => {
-    const existing = state.plans[id] as { plan?: OnboardPlan; progress?: unknown } | undefined;
+    const existing = state.plans[taskId] as
+      | { plan?: OnboardPlan; progress?: unknown }
+      | undefined;
     plan = await createOnboardPlan({
       baseUrl: DEFAULT_BASE_URL,
       did: envelope.did,
@@ -168,56 +182,40 @@ async function taskPlan(
         "a different onboarding plan already exists; preserve or remove it deliberately",
       );
     }
-    state.plans[id] = { plan, progress: existing?.progress ?? {} };
+    state.plans[taskId] = { plan, progress: existing?.progress ?? {} };
   });
-  printJson(plan);
+  return plan!;
 }
 
 async function taskRun(id: string): Promise<void> {
   const store = new LocalStateStore();
   if (!knownTaskIds().includes(id as never)) throw unknownTask(id);
-  const unlocked = id === "technocore-onboard"
-    ? await decryptIdentity(
-      await store.readIdentity(),
-      await Secret.prompt("Identity passphrase:"),
-    )
-    : undefined;
-  const result = await store.withStateLock(async (state, save) => {
-    const plan = onboardRecordFromState(state);
-    const client = new TechnocoreClient(plan.baseUrl);
-    if (id === "technocore-refresh") {
-      await refreshOnboardNotes(plan, client);
-      const receipt = { taskId: id, planHash: plan.planHash, verifiedAt: new Date().toISOString() };
-      state.receipts[id] = receipt;
-      await save();
-      return receipt;
-    }
-    return await runOnboardTask(plan, {
-      client,
-      identity: unlocked!,
-      state,
-      now: Date.now,
-      saveState: () => save(),
+  const unlocked = await decryptIdentity(
+    await store.readIdentity(),
+    await Secret.prompt("Identity passphrase:"),
+  );
+  try {
+    const result = await store.withStateLock(async (state, save) => {
+      const plan = onboardRecordFromState(state);
+      const client = new TechnocoreClient(plan.baseUrl);
+      return await runOnboardTask(plan, {
+        client,
+        identity: unlocked,
+        state,
+        now: Date.now,
+        saveState: () => save(),
+      });
     });
-  });
-  printJson(result);
+    printJson(result);
+  } finally {
+    unlocked.destroy();
+  }
 }
 
 async function taskStatus(id: string): Promise<void> {
   if (!knownTaskIds().includes(id as never)) throw unknownTask(id);
   const { plan, state } = await loadOnboardRecord();
   const client = new TechnocoreClient(plan.baseUrl);
-  if (id === "technocore-refresh") {
-    const profile = await client.readNote(plan.profile.ns, plan.profile.key);
-    const contribution = await client.readNote(plan.contribution.ns, plan.contribution.key);
-    printJson({
-      taskId: id,
-      profileMatches: profile === plan.profile.value,
-      contributionMatches: contribution === plan.contribution.value,
-      localReceipt: state.receipts[id] ?? null,
-    });
-    return;
-  }
   const receipt = state.receipts[id] as OnboardReceipt | undefined;
   if (!receipt) throw new Error("no local onboarding receipt; run the task first");
   printJson({
@@ -317,7 +315,7 @@ if (import.meta.main) {
   try {
     await buildCli().parse(Deno.args);
   } catch (error) {
-    console.error(`error: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`error: ${error instanceof Error ? error.message : String(error)}`);
     Deno.exitCode = 1;
   }
 }

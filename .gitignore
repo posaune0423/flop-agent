@@ -1,5 +1,7 @@
 .flop-agent/
+.test-tmp/
+ops/build/*
+!ops/build/.gitkeep
 .env
 *.pem
 *private-key*.json
-

@@ -8,7 +8,7 @@ import {
   fingerprintDid,
   nextNonce,
   validateNonce,
-} from "../src/protocol.ts";
+} from "../../src/protocol.ts";
 
 Deno.test("encodes the official Ed25519 public-key vector as did:key", async () => {
   const raw = base64UrlDecode("5zTqbCtiV95yNV5HKqBaTEh-a0Y8Ap7TBt8vAbVja1g");

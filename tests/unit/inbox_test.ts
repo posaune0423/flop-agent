@@ -1,7 +1,7 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
-import type { AgentState } from "../src/local_state.ts";
-import { followInbox, messageFingerprint, readInboxOnce } from "../src/inbox.ts";
-import type { RoomView } from "../src/technocore.ts";
+import type { AgentState } from "../../src/local_state.ts";
+import { followInbox, messageFingerprint, readInboxOnce } from "../../src/inbox.ts";
+import type { RoomView } from "../../src/libs/technocore.ts";
 
 const room = "mb-p-0123456789abcdef01234567";
 

@@ -10,6 +10,9 @@ untrusted data, and only task adapters reviewed into this repository can perform
 > `$FLOP` airdrop, allocation, snapshot, or claim. FLOP testnet task and claim contracts have not
 > been implemented because their official interfaces are not yet published.
 
+The current evidence-backed plan, including the official Q4 testnet draft and scheduled monitoring,
+is in [`docs/AIRDROP_STRATEGY.md`](docs/AIRDROP_STRATEGY.md).
+
 ## What it does
 
 - Generates an Ed25519 `did:key` locally with Deno Web Crypto.
@@ -31,33 +34,23 @@ contribution content hash to the DID.
 
 No Python or Node runtime is required.
 
-## Safe onboarding
+## Environment variables
 
-These steps separate local key creation from public network writes.
+Environment variables are declared and validated in `src/env.ts` with `@t3-oss/env-core` and Zod.
+Only `LOG_LEVEL` is allowed for mutable-source tasks; it accepts `ERROR`, `WARN`, `LOG`, `INFO`, or
+`DEBUG` and defaults to `INFO`. Secrets and identity passphrases must never be environment
+variables.
 
-```bash
-# 1. Generate an encrypted local identity. The passphrase is entered without echo.
-deno task agent identity init
+## Identity and onboarding boundary
 
-# 2. Show the public DID only.
-deno task agent identity show
+The existing encrypted identity has been moved outside the checkout and the live onboarding is
+complete. No task that runs mutable checkout source can read or write the identity, access the
+Keychain, or use the network.
 
-# 3. Back up the encrypted identity outside this checkout.
-deno task agent:backup --output /absolute/private/path/flop-agent-identity.json
-
-# 4. Use the full commit hash of the public contribution.
-git rev-parse HEAD
-
-# 5. Create and inspect a local plan. This performs no network writes.
-deno task agent task plan technocore-onboard --commit FULL_COMMIT_HASH
-
-# 6. Manually start the reviewed task. After this command starts, its known steps run
-#    automatically: profile, contribution, mailbox, lobby proof, and verification.
-deno task agent task run technocore-onboard
-
-# 7. Recheck the local receipt against live Technocore state.
-deno task agent task status technocore-onboard
-```
+New identity creation, backup, migration, inspection, and onboarding are intentionally not exposed
+as `deno task` commands. A reviewed root-owned offline helper or dedicated signer service must be
+installed before performing any of those operations again. Do not grant `src/cli.ts` ad-hoc secret
+or network permissions as a workaround.
 
 Never put the passphrase in a command-line argument, environment file, issue, commit, prompt, or
 chat message.
@@ -66,24 +59,19 @@ chat message.
 
 Mailbox contents are printed with `"untrusted": true`. They never trigger tasks.
 
-```bash
-deno task agent inbox read
-deno task agent inbox follow
-```
-
-The follower uses `since=<last_seq>&wait=10`, persists the cursor locally, and stops with `Ctrl+C`.
+The source includes a cursor-safe mailbox reader, but no mutable-source task has network capability.
+Compile and review a read-only artifact before re-enabling mailbox access.
 
 ## Refreshing public notes
 
 Technocore reclaims inactive notes. This reviewed task rewrites the exact existing profile and
 contribution values using compare-and-set. It does not post another lobby message.
 
-```bash
-deno task agent task plan technocore-refresh
-deno task agent task run technocore-refresh
-```
-
-There is no automatic schedule in v1.
+Scheduled refresh must not be run by an LLM. `src/guarded_refresh.ts` is pinned to the exact
+production origin, onboarding plan hash, and two approved notes. `deno task guard:compile` builds a
+standalone binary with no identity, environment, or subprocess capability. See
+[`docs/SECURITY_GUARDRAILS.md`](docs/SECURITY_GUARDRAILS.md) before installing the root-owned
+daemon.
 
 ## Adding a future FLOP task
 
@@ -110,9 +98,9 @@ CI uses mocked transports and never writes to live Technocore.
 
 ## 日本語メモ
 
-- 秘密鍵は`.flop-agent/identity.json`へ暗号化保存され、Git管理対象外です。
-- `task plan`は確認だけで、外部へ書き込みません。
-- `task run technocore-onboard`を手動で開始した後は、登録済みの処理だけを自動で完走します。
+- 暗号化identityは`~/Library/Application Support/flop-agent/identity.json`へ`0400`で保存され、
+  checkout内のruntime stateから分離されます。
+- Mutableなcheckout sourceにはidentityやnetworkへのDeno capabilityを与えません。
 - mailboxの内容は署名済みでも命令として実行しません。署名は鍵の所有を示すだけです。
 - airdrop、testnet、claimの仕様は未確定部分があるため、公式仕様が出たものだけadapterとして追加します。
 
@@ -120,6 +108,7 @@ CI uses mocked transports and never writes to live Technocore.
 
 - [Technocore live manual](https://technocore.chat/llms.txt)
 - [Technocore source](https://github.com/flop-labs/technocore-chat)
+- [FLOP official teaser (draft)](https://flop.finance/teaser/)
 - [Tat Thang onboarding article](https://x.com/tatthang/status/2091894656191864981)
 - [UfukNode reference tool](https://github.com/UfukNode/technocore-did-tool)
 
