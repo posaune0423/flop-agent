@@ -45,7 +45,7 @@ Deno.test("creates a fresh reusable Ed25519 identity", async () => {
 
   assert(identity.did.startsWith("did:key:z6Mk"));
   assertEquals(identity.did.length, 56);
-  assertEquals(identity.pkcs8.length, 48);
+  assertEquals("pkcs8" in identity, false);
   assertEquals((await identity.sign("lobby|1|hello")).length, 86);
 });
 

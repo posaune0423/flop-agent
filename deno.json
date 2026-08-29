@@ -6,9 +6,9 @@
     "@std/path": "jsr:@std/path@1.1.6"
   },
   "tasks": {
-    "agent": "deno run --allow-read=.flop-agent --allow-write=.flop-agent --allow-net=technocore.chat src/cli.ts",
-    "agent:backup": "deno run --allow-read --allow-write src/cli.ts identity backup",
-    "test": "deno test --allow-read --allow-write --allow-env --allow-run=deno",
+    "agent": "deno run src/cli.ts",
+    "guard:compile": "deno compile --no-prompt --allow-sys=uid --allow-read=/var/db/flop-agent-refresh --allow-write=/var/db/flop-agent-refresh/runtime --allow-net=technocore.chat:443 --output=ops/build/flop-agent-refresh src/guarded_refresh.ts",
+    "test": "deno test --allow-read=src,tests,deno.json,AGENTS.md,README.md,ops,.agents,.cursor,.claude,.codex,CLAUDE.md,.test-tmp --allow-write=.test-tmp --allow-sys=uid",
     "check": "deno fmt --check && deno lint && deno check src/cli.ts && deno task test",
     "ci": "deno task check"
   },

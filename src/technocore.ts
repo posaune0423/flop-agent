@@ -46,8 +46,8 @@ export class TechnocoreClient {
     readonly requestTimeoutMs = 15_000,
   ) {
     const parsed = new URL(baseUrl);
-    if (!/^https?:$/.test(parsed.protocol) || parsed.pathname !== "/") {
-      throw new Error("Technocore base URL must be an HTTP(S) origin");
+    if (parsed.origin !== "https://technocore.chat" || parsed.pathname !== "/") {
+      throw new Error("Technocore base URL must be the exact production HTTPS origin");
     }
     if (!Number.isFinite(requestTimeoutMs) || requestTimeoutMs <= 0) {
       throw new Error("request timeout must be positive");
@@ -162,6 +162,7 @@ export class TechnocoreClient {
     try {
       response = await this.fetcher(`${this.baseUrl}/r/${room}?format=json`, {
         method: "POST",
+        redirect: "error",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(this.requestTimeoutMs),
@@ -219,6 +220,7 @@ export class TechnocoreClient {
     try {
       return await this.fetcher(input, {
         ...init,
+        redirect: "error",
         signal: init?.signal ?? AbortSignal.timeout(this.requestTimeoutMs),
       });
     } catch (error) {
@@ -259,7 +261,7 @@ async function requireOk(response: Response): Promise<void> {
     const match = body.match(/([0-9]+(?:\.[0-9]+)?)\s*seconds?/i);
     const retryAfter = Number.isFinite(parsed) ? parsed : (match ? Number(match[1]) : undefined);
     throw new TechnocoreError(
-      `Technocore rate limited the request${body ? `: ${body}` : ""}`,
+      "Technocore rate limited the request",
       "rate_limited",
       429,
       retryAfter,
@@ -273,7 +275,7 @@ async function requireOk(response: Response): Promise<void> {
     ? "conflict"
     : "contract";
   throw new TechnocoreError(
-    `Technocore returned HTTP ${response.status}${body ? `: ${body}` : ""}`,
+    `Technocore returned HTTP ${response.status}`,
     kind,
     response.status,
   );

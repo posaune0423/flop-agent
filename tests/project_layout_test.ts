@@ -24,10 +24,129 @@ Deno.test("shares one canonical agents tree across supported coding agents", asy
   assertEquals(await Deno.readLink(`${root}/CLAUDE.md`), "AGENTS.md");
 });
 
-Deno.test("backup task can inspect an arbitrary absolute output directory", async () => {
+Deno.test("mutable source tasks have no protected identity capability", async () => {
   const config = JSON.parse(await Deno.readTextFile(`${root}/deno.json`));
-  const command = String(config.tasks["agent:backup"]);
-
-  assertEquals(command.includes("--allow-read "), true);
-  assertEquals(command.includes("--allow-write "), true);
+  for (
+    const removed of [
+      "agent:identity-init",
+      "agent:identity-show",
+      "agent:backup",
+      "agent:migrate",
+    ]
+  ) {
+    assertEquals(config.tasks[removed], undefined, removed);
+  }
+  for (const [name, value] of Object.entries(config.tasks)) {
+    assertEquals(String(value).includes("Application Support/flop-agent"), false, name);
+  }
 });
+
+Deno.test("guarded refresh source excludes identity, commands, and environment", async () => {
+  assertEquals(await exists(`${root}/src/guarded_refresh.ts`), true);
+  const source = await Deno.readTextFile(`${root}/src/guarded_refresh.ts`);
+  assertEquals(
+    source.includes("da3c27957b0f7e03e1f5d35f7f9623c739f8e7cfcec2f414890a16812b85749e"),
+    true,
+  );
+  assertEquals(source.includes('from "./identity.ts"'), false);
+  assertEquals(source.includes("Deno.Command"), false);
+  assertEquals(source.includes("Deno.env"), false);
+});
+
+Deno.test("interactive identity material is destroyed after use", async () => {
+  const source = await Deno.readTextFile(`${root}/src/cli.ts`);
+  assertEquals(source.includes("identity.destroy()"), true);
+  assertEquals(source.includes("unlocked.destroy()"), true);
+});
+
+Deno.test("local tests cannot spawn subprocesses or inspect host secrets", async () => {
+  const config = JSON.parse(await Deno.readTextFile(`${root}/deno.json`));
+  const command = String(config.tasks.test);
+  for (const allowed of ["src", "tests", "deno.json", "AGENTS.md", "ops", ".agents"]) {
+    assertEquals(command.includes(allowed), true, allowed);
+  }
+  assertEquals(command.includes("--allow-write=.test-tmp"), true);
+  for (
+    const forbidden of [
+      "--allow-read=.",
+      "--allow-read ",
+      "--allow-write ",
+      "--allow-env",
+      "--allow-run",
+      "--allow-net",
+      "--allow-all",
+      " -A",
+    ]
+  ) {
+    assertEquals(command.includes(forbidden), false, forbidden);
+  }
+});
+
+Deno.test("scheduled refresh builds as a fixed root-installable capability binary", async () => {
+  const config = JSON.parse(await Deno.readTextFile(`${root}/deno.json`));
+  const command = String(config.tasks["guard:compile"]);
+  for (
+    const required of [
+      "deno compile",
+      "--no-prompt",
+      "--allow-sys=uid",
+      "--allow-read=/var/db/flop-agent-refresh",
+      "--allow-write=/var/db/flop-agent-refresh/runtime",
+      "--allow-net=technocore.chat:443",
+      "src/guarded_refresh.ts",
+    ]
+  ) {
+    assertEquals(command.includes(required), true, required);
+  }
+  for (const forbidden of ["--allow-env", "--allow-run", "--allow-ffi", "--allow-all", " -A"]) {
+    assertEquals(command.includes(forbidden), false, forbidden);
+  }
+
+  const source = await Deno.readTextFile(`${root}/src/guarded_refresh.ts`);
+  assertEquals(source.includes("/var/db/flop-agent-refresh"), true);
+
+  const plist = await Deno.readTextFile(
+    `${root}/ops/io.github.posaune0423.flop-agent.refresh.plist`,
+  );
+  assertEquals(plist.includes("/usr/local/libexec/flop-agent-refresh"), true);
+  assertEquals(plist.includes("_floprefresh"), true);
+  assertEquals(plist.includes("/bin/sh"), false);
+  assertEquals(plist.includes(root), false);
+});
+
+Deno.test("mutable source tasks have no protocol network capability", async () => {
+  const config = JSON.parse(await Deno.readTextFile(`${root}/deno.json`));
+  for (
+    const removed of [
+      "agent:onboard",
+      "agent:status",
+      "agent:inbox",
+      "agent:refresh-guarded",
+    ]
+  ) {
+    assertEquals(config.tasks[removed], undefined, removed);
+  }
+  for (const [name, value] of Object.entries(config.tasks)) {
+    if (name === "guard:compile") continue;
+    assertEquals(String(value).includes("--allow-net"), false, name);
+  }
+});
+
+Deno.test("legacy state migration locks the old writer before moving files", async () => {
+  const source = await Deno.readTextFile(`${root}/src/local_state.ts`);
+  const lockIndex = source.indexOf("await legacyLock.lock(true)");
+  const moveIndex = source.indexOf("await migrateLegacyFile(\n          legacyStatePath");
+  assertEquals(lockIndex >= 0, true);
+  assertEquals(moveIndex >= 0, true);
+  assertEquals(lockIndex < moveIndex, true);
+});
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await Deno.lstat(path);
+    return true;
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return false;
+    throw error;
+  }
+}

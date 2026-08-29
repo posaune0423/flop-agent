@@ -49,7 +49,7 @@ Deno.test("runs a manually-started known task to completion and persists each si
   const state: AgentState = { version: 1, nonces: {}, cursors: {}, plans: {}, receipts: {} };
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign: () => Promise.resolve("A".repeat(86)),
   } satisfies UnlockedIdentity;
   const client = {
@@ -123,7 +123,7 @@ Deno.test("resumes without repeating already-recorded signed writes", async () =
   const rooms: string[] = [];
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign: () => Promise.resolve("A".repeat(86)),
   } satisfies UnlockedIdentity;
   const client = {
@@ -169,7 +169,7 @@ Deno.test("rejects a task plan changed after review", async () => {
   const state: AgentState = { version: 1, nonces: {}, cursors: {}, plans: {}, receipts: {} };
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign: () => Promise.resolve("A".repeat(86)),
   } satisfies UnlockedIdentity;
 
@@ -196,7 +196,7 @@ Deno.test("persists a signed-write intent before sending and reconciles it after
   const initial: AgentState = { version: 1, nonces: {}, cursors: {}, plans: {}, receipts: {} };
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign: () => Promise.resolve("A".repeat(86)),
   } satisfies UnlockedIdentity;
   const committed: TechnocoreMessage = {
@@ -349,7 +349,7 @@ Deno.test("does not replay a pending signed write when reconciliation cannot be 
   let sends = 0;
   const identity = {
     did: DID,
-    pkcs8: new Uint8Array(),
+    destroy: () => {},
     sign: () => Promise.resolve("A".repeat(86)),
   } satisfies UnlockedIdentity;
 

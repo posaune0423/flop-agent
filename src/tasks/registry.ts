@@ -1,9 +1,8 @@
-export type KnownTaskId = "technocore-onboard" | "technocore-refresh";
+export type KnownTaskId = "technocore-onboard";
 
 const TASKS: Readonly<Record<KnownTaskId, string>> = {
   "technocore-onboard":
     "Publish the DID profile, contribution anchor, signed mailbox, and lobby proof.",
-  "technocore-refresh": "Refresh the existing profile and contribution notes without lobby spam.",
 };
 
 export function knownTaskIds(): KnownTaskId[] {

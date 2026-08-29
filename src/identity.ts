@@ -13,9 +13,11 @@ export interface IdentityEnvelope {
 
 export interface UnlockedIdentity {
   did: string;
-  pkcs8: Uint8Array;
   sign(message: string): Promise<string>;
+  destroy(): void;
 }
+
+const privateMaterial = new WeakMap<UnlockedIdentity, Uint8Array>();
 
 export function createIdentity(): Promise<UnlockedIdentity> {
   return createIdentityInternal();
@@ -29,29 +31,26 @@ async function createIdentityInternal(): Promise<UnlockedIdentity> {
   ) as CryptoKeyPair;
   const pkcs8 = new Uint8Array(await crypto.subtle.exportKey("pkcs8", pair.privateKey));
   const rawPublicKey = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
-  return unlockedIdentity(pair.privateKey, pkcs8, didFromRawPublicKey(rawPublicKey));
+  const signingKey = await importSigningKey(pkcs8, false);
+  return unlockedIdentity(signingKey, pkcs8, didFromRawPublicKey(rawPublicKey));
 }
 
 export async function identityFromPkcs8(pkcs8: Uint8Array): Promise<UnlockedIdentity> {
-  const privateKey = await crypto.subtle.importKey(
-    "pkcs8",
-    toArrayBuffer(pkcs8),
-    { name: "Ed25519" },
-    true,
-    ["sign"],
-  );
-  const jwk = await crypto.subtle.exportKey("jwk", privateKey);
+  const extractableKey = await importSigningKey(pkcs8, true);
+  const jwk = await crypto.subtle.exportKey("jwk", extractableKey);
   if (jwk.kty !== "OKP" || jwk.crv !== "Ed25519" || !jwk.x) {
     throw new Error("PKCS8 key is not an extractable Ed25519 identity");
   }
-  return unlockedIdentity(privateKey, pkcs8.slice(), didFromRawPublicKey(base64UrlDecode(jwk.x)));
+  const signingKey = await importSigningKey(pkcs8, false);
+  return unlockedIdentity(signingKey, pkcs8.slice(), didFromRawPublicKey(base64UrlDecode(jwk.x)));
 }
 
 function unlockedIdentity(privateKey: CryptoKey, pkcs8: Uint8Array, did: string): UnlockedIdentity {
-  return {
+  let destroyed = false;
+  const identity: UnlockedIdentity = {
     did,
-    pkcs8,
     async sign(message: string): Promise<string> {
+      if (destroyed) throw new Error("identity has been destroyed");
       const signature = await crypto.subtle.sign(
         "Ed25519",
         privateKey,
@@ -59,7 +58,25 @@ function unlockedIdentity(privateKey: CryptoKey, pkcs8: Uint8Array, did: string)
       );
       return base64UrlEncode(new Uint8Array(signature));
     },
+    destroy(): void {
+      if (destroyed) return;
+      destroyed = true;
+      privateMaterial.get(identity)?.fill(0);
+      privateMaterial.delete(identity);
+    },
   };
+  privateMaterial.set(identity, pkcs8);
+  return identity;
+}
+
+function importSigningKey(pkcs8: Uint8Array, extractable: boolean): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    "pkcs8",
+    toArrayBuffer(pkcs8),
+    { name: "Ed25519" },
+    extractable,
+    ["sign"],
+  );
 }
 
 async function deriveEncryptionKey(
@@ -101,11 +118,19 @@ export async function encryptIdentity(
   if (iv.length !== 12) throw new Error("AES-GCM IV must be 12 bytes");
 
   const key = await deriveEncryptionKey(passphrase, salt, iterations);
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: toArrayBuffer(iv) },
-    key,
-    toArrayBuffer(identity.pkcs8),
-  );
+  const material = privateMaterial.get(identity);
+  if (!material) throw new Error("identity private material is unavailable");
+  const plaintext = material.slice();
+  let ciphertext: ArrayBuffer;
+  try {
+    ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: toArrayBuffer(iv) },
+      key,
+      toArrayBuffer(plaintext),
+    );
+  } finally {
+    plaintext.fill(0);
+  }
   return {
     version: 1,
     did: identity.did,
@@ -135,16 +160,23 @@ export async function decryptIdentity(
     const iv = base64UrlDecode(envelope.crypto.iv);
     const ciphertext = base64UrlDecode(envelope.crypto.ciphertext);
     const key = await deriveEncryptionKey(passphrase, salt, envelope.crypto.iterations);
-    const plaintext = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: toArrayBuffer(iv) },
-      key,
-      toArrayBuffer(ciphertext),
+    const plaintext = new Uint8Array(
+      await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: toArrayBuffer(iv) },
+        key,
+        toArrayBuffer(ciphertext),
+      ),
     );
-    const identity = await identityFromPkcs8(new Uint8Array(plaintext));
-    if (identity.did !== envelope.did) {
-      throw new Error("decrypted identity does not match the public DID");
+    try {
+      const identity = await identityFromPkcs8(plaintext);
+      if (identity.did !== envelope.did) {
+        identity.destroy();
+        throw new Error("decrypted identity does not match the public DID");
+      }
+      return identity;
+    } finally {
+      plaintext.fill(0);
     }
-    return identity;
   } catch (error) {
     if (error instanceof Error && error.message.includes("does not match")) throw error;
     throw new Error("could not decrypt identity; the passphrase or envelope is invalid", {

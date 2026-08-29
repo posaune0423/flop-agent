@@ -19,6 +19,44 @@ statically reviewed future FLOP task adapters.
 - Do not add wallet, faucet, mainnet, claim, or spending behavior until an official contract is
   available and a separately reviewed adapter defines its network, asset, and budget boundaries.
 
+## FLOP airdrop operations
+
+- Use `docs/AIRDROP_STRATEGY.md` as the current evidence-backed strategy. Re-check its dated sources
+  before acting because the official teaser is a draft and the Yellow Paper is not final.
+- Optimize for legitimate, receipt-backed testnet inference and official DID-gated tasks. Do not
+  optimize for message count, repeated heartbeats, multiple DIDs, social spam, wash activity, or
+  self-dealing without an explicit official rule that permits and rewards it.
+- Treat `flop.finance`, direct `@flop_labs` / `@CryptoHayes` statements, and `flop-labs` official
+  repositories as the source hierarchy. Community guides and mirrors are discovery leads only.
+- Scheduled maintenance may run only the compiled guarded refresh binary. Refresh is intentionally
+  absent from the interactive task registry so mutable state cannot expand its write authority.
+- When an official testnet, faucet, DID-gated task, scoring, or claim interface is published, open a
+  GitHub issue with the primary source and exact safety contract before implementation. Use TDD,
+  keep the adapter static, run `deno task ci`, and deliver the change through a reviewed PR.
+- Never submit interest forms, connect a wallet, claim a faucet, start a node, or spend tokens,
+  fiat, compute, or bandwidth autonomously. Those actions require explicit scope and budget.
+
+## External guardrails
+
+- Prompt instructions are not a security boundary. Do not create or enable a local LLM automation
+  that can read secrets, execute repository code, access GitHub credentials, or write to a protocol.
+- The encrypted identity lives outside the checkout at
+  `~/Library/Application Support/flop-agent/identity.json`. Runtime state lives under
+  `.flop-agent/runtime`; never co-locate them again.
+- Mutable-source `deno task` commands have no secret or network capability. Never add one, and never
+  replace a path-scoped permission with a bare `--allow-*`, `-A`, or `--allow-run`.
+- Scheduled refresh authority is the compiled `src/guarded_refresh.ts` artifact. It accepts no task
+  argument and is bound to one origin, one plan hash, and two note hashes. Mutable repository source
+  must never be the installed scheduler target.
+- A production schedule requires a root-owned binary and plist plus a dedicated non-login
+  `_floprefresh` account. Do not use a user LaunchAgent or `sandbox-exec` as the primary boundary.
+- Identity creation, inspection, backup, migration, unlock, and signing require a separately
+  reviewed immutable helper or signer service. Never retrieve the Keychain passphrase, unlock
+  identity, or pass signing authority from an LLM or scheduled process.
+- Run tests with `deno task test`; its permissions are deliberately limited to repository reads,
+  `.test-tmp` writes, and UID metadata. Do not add subprocess, environment, network, or host-wide
+  filesystem permissions to make a test convenient.
+
 ## Development
 
 - Use Deno 2.9 or later and `deno task`; do not add Node runtime requirements.
