@@ -4,7 +4,7 @@ import { createIdentity, decryptIdentity, encryptIdentity } from "./identity.ts"
 import { followInbox, readInboxOnce } from "./inbox.ts";
 import { type AgentState, LocalStateStore } from "./local_state.ts";
 import { fingerprintDid } from "./protocol.ts";
-import { TechnocoreClient, type TechnocoreMessage } from "./technocore.ts";
+import { TechnocoreClient, type TechnocoreMessage } from "./libs/technocore.ts";
 import {
   createOnboardPlan,
   type OnboardPlan,
@@ -13,6 +13,7 @@ import {
   verifyOnboardTask,
 } from "./tasks/onboard.ts";
 import { knownTaskIds, taskDescription } from "./tasks/registry.ts";
+import { logger } from "./utils/logger.ts";
 
 const DEFAULT_BASE_URL = "https://technocore.chat";
 const DEFAULT_REPOSITORY = "https://github.com/posaune0423/flop-agent";
@@ -39,7 +40,7 @@ export function buildCli() {
         .option("-o, --output <path:string>", "Absolute backup path.", { required: true })
         .action(async ({ output }) => {
           await new LocalStateStore().backupIdentity(output);
-          console.log(`Encrypted identity backed up to ${output}`);
+          logger.info(`Encrypted identity backed up to ${output}`);
         }),
     );
 
@@ -126,8 +127,8 @@ async function identityInit(): Promise<void> {
   } finally {
     identity.destroy();
   }
-  console.log(`Created ${identity.did}`);
-  console.log(
+  logger.info(`Created ${identity.did}`);
+  logger.info(
     "The encrypted key is in the protected application-support directory; back it up before publishing.",
   );
 }
@@ -328,7 +329,7 @@ if (import.meta.main) {
   try {
     await buildCli().parse(Deno.args);
   } catch (error) {
-    console.error(`error: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`error: ${error instanceof Error ? error.message : String(error)}`);
     Deno.exitCode = 1;
   }
 }

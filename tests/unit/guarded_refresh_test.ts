@@ -1,7 +1,7 @@
 import { assertEquals, assertRejects } from "@std/assert";
-import * as guarded from "../src/guarded_refresh.ts";
-import type { AgentState } from "../src/local_state.ts";
-import { createOnboardPlan, type OnboardPlan } from "../src/tasks/onboard.ts";
+import * as guarded from "../../src/guarded_refresh.ts";
+import type { AgentState } from "../../src/local_state.ts";
+import { createOnboardPlan, type OnboardPlan } from "../../src/tasks/onboard.ts";
 
 Deno.test("exports one deterministic guarded refresh operation", () => {
   const exported = guarded as Record<string, unknown>;

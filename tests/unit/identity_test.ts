@@ -5,7 +5,7 @@ import {
   encryptIdentity,
   type IdentityEnvelope,
   identityFromPkcs8,
-} from "../src/identity.ts";
+} from "../../src/identity.ts";
 
 const PKCS8_SEED_PREFIX = Uint8Array.from([
   0x30,

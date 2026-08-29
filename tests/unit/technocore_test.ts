@@ -1,6 +1,10 @@
 import { assertEquals, assertRejects, assertThrows } from "@std/assert";
-import type { UnlockedIdentity } from "../src/identity.ts";
-import { TechnocoreClient, TechnocoreError, type TechnocoreMessage } from "../src/technocore.ts";
+import type { UnlockedIdentity } from "../../src/identity.ts";
+import {
+  TechnocoreClient,
+  TechnocoreError,
+  type TechnocoreMessage,
+} from "../../src/libs/technocore.ts";
 
 const DID = "did:key:z6Mkv1o2GEgtXjFdEMfLtupcKhGRydM8V7VHzii7Uh4aHoqH";
 

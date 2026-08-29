@@ -1,14 +1,14 @@
 import { assert, assertEquals, assertRejects } from "@std/assert";
-import type { UnlockedIdentity } from "../src/identity.ts";
-import type { AgentState } from "../src/local_state.ts";
+import type { UnlockedIdentity } from "../../src/identity.ts";
+import type { AgentState } from "../../src/local_state.ts";
 import {
   createOnboardPlan,
   type OnboardProgress,
   refreshOnboardNotes,
   runOnboardTask,
   verifyOnboardTask,
-} from "../src/tasks/onboard.ts";
-import type { TechnocoreMessage } from "../src/technocore.ts";
+} from "../../src/tasks/onboard.ts";
+import type { TechnocoreMessage } from "../../src/libs/technocore.ts";
 
 const DID = "did:key:z6Mkv1o2GEgtXjFdEMfLtupcKhGRydM8V7VHzii7Uh4aHoqH";
 const FP = "83c44d7b9324fb98";

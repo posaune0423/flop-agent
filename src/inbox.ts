@@ -1,5 +1,5 @@
 import type { AgentState } from "./local_state.ts";
-import type { RoomView, TechnocoreMessage } from "./technocore.ts";
+import type { RoomView, TechnocoreMessage } from "./libs/technocore.ts";
 
 export interface InboxPort {
   readRoom(

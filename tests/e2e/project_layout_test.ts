@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 
-const root = fromFileUrl(new URL("..", import.meta.url));
+const root = fromFileUrl(new URL("../..", import.meta.url));
 
 Deno.test("vendors the recorded Technocore project skill exactly", async () => {
   const metadata = JSON.parse(
@@ -43,6 +43,33 @@ Deno.test("agents load the structure ownership contract", async () => {
   }
 });
 
+Deno.test("uses the standard libs, constants, utils, and test-suite layout", async () => {
+  for (
+    const required of [
+      "src/libs/technocore.ts",
+      "src/constants/guarded_refresh.ts",
+      "src/constants/logging.ts",
+      "src/utils/logger.ts",
+      "tests/unit",
+      "tests/integration",
+      "tests/e2e",
+    ]
+  ) {
+    assertEquals(await exists(`${root}/${required}`), true, required);
+  }
+  assertEquals(await exists(`${root}/src/technocore.ts`), false);
+
+  const logger = await Deno.readFile(`${root}/src/utils/logger.ts`);
+  const digest = await crypto.subtle.digest("SHA-256", logger);
+  const actual = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  assertEquals(actual, "80d147ef912e57459ca499f3dddc596e2da6a2770747ffc7e322d864227b0a98");
+
+  for await (const entry of Deno.readDir(`${root}/tests`)) {
+    assertEquals(entry.isFile && entry.name.endsWith("_test.ts"), false, entry.name);
+  }
+});
+
 Deno.test("mutable source tasks have no protected identity capability", async () => {
   const config = JSON.parse(await Deno.readTextFile(`${root}/deno.json`));
   for (
@@ -63,10 +90,12 @@ Deno.test("mutable source tasks have no protected identity capability", async ()
 Deno.test("guarded refresh source excludes identity, commands, and environment", async () => {
   assertEquals(await exists(`${root}/src/guarded_refresh.ts`), true);
   const source = await Deno.readTextFile(`${root}/src/guarded_refresh.ts`);
+  const policy = await Deno.readTextFile(`${root}/src/constants/guarded_refresh.ts`);
   assertEquals(
-    source.includes("da3c27957b0f7e03e1f5d35f7f9623c739f8e7cfcec2f414890a16812b85749e"),
+    policy.includes("da3c27957b0f7e03e1f5d35f7f9623c739f8e7cfcec2f414890a16812b85749e"),
     true,
   );
+  assertEquals(source.includes('from "./constants/guarded_refresh.ts"'), true);
   assertEquals(source.includes('from "./identity.ts"'), false);
   assertEquals(source.includes("Deno.Command"), false);
   assertEquals(source.includes("Deno.env"), false);
@@ -76,6 +105,7 @@ Deno.test("interactive identity material is destroyed after use", async () => {
   const source = await Deno.readTextFile(`${root}/src/cli.ts`);
   assertEquals(source.includes("identity.destroy()"), true);
   assertEquals(source.includes("unlocked.destroy()"), true);
+  assertEquals(source.includes('from "./utils/logger.ts"'), true);
 });
 
 Deno.test("local tests cannot spawn subprocesses or inspect host secrets", async () => {
@@ -121,8 +151,8 @@ Deno.test("scheduled refresh builds as a fixed root-installable capability binar
     assertEquals(command.includes(forbidden), false, forbidden);
   }
 
-  const source = await Deno.readTextFile(`${root}/src/guarded_refresh.ts`);
-  assertEquals(source.includes("/var/db/flop-agent-refresh"), true);
+  const policy = await Deno.readTextFile(`${root}/src/constants/guarded_refresh.ts`);
+  assertEquals(policy.includes("/var/db/flop-agent-refresh"), true);
 
   const plist = await Deno.readTextFile(
     `${root}/ops/io.github.posaune0423.flop-agent.refresh.plist`,

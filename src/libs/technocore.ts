@@ -1,5 +1,5 @@
-import type { UnlockedIdentity } from "./identity.ts";
-import { canonicalRoomMessage, cleanText, validateNonce } from "./protocol.ts";
+import type { UnlockedIdentity } from "../identity.ts";
+import { canonicalRoomMessage, cleanText, validateNonce } from "../protocol.ts";
 
 export type TechnocoreErrorKind =
   | "bad_request"

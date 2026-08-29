@@ -1,6 +1,6 @@
 import type { UnlockedIdentity } from "../identity.ts";
 import type { AgentState } from "../local_state.ts";
-import type { RoomView, TechnocoreMessage } from "../technocore.ts";
+import type { RoomView, TechnocoreMessage } from "../libs/technocore.ts";
 import { cleanText, fingerprintDid, nextNonce } from "../protocol.ts";
 
 export interface OnboardInput {

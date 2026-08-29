@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects, assertThrows } from "@std/assert";
-import type { IdentityEnvelope } from "../src/identity.ts";
-import { assertPrivatePathInfo, LocalStateStore } from "../src/local_state.ts";
+import type { IdentityEnvelope } from "../../src/identity.ts";
+import { assertPrivatePathInfo, LocalStateStore } from "../../src/local_state.ts";
 import { makeTestDir } from "./test_temp.ts";
 
 const envelope: IdentityEnvelope = {

@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { knownTaskIds, taskDescription } from "../src/tasks/registry.ts";
+import { knownTaskIds, taskDescription } from "../../src/tasks/registry.ts";
 
 Deno.test("exposes only statically reviewed task adapters", () => {
   assertEquals(knownTaskIds(), ["technocore-onboard"]);

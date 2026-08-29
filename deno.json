@@ -1,5 +1,7 @@
 {
   "imports": {
+    "@/": "./src/",
+    "@/env": "./src/env.ts",
     "@cliffy/command": "jsr:@cliffy/command@1.2.1",
     "@cliffy/prompt/secret": "jsr:@cliffy/prompt@1.2.1/secret",
     "@std/assert": "jsr:@std/assert@1.0.19",
@@ -13,7 +15,7 @@
     "ci": "deno task check"
   },
   "fmt": {
-    "exclude": [".agents/skills/technocore-chat/SKILL.md"],
+    "exclude": [".agents/skills/technocore-chat/SKILL.md", "src/utils/logger.ts"],
     "lineWidth": 100,
     "semiColons": true,
     "singleQuote": false

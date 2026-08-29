@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
-import { buildCli, planOnboardTask } from "../src/cli.ts";
-import { LocalStateStore } from "../src/local_state.ts";
-import { makeTestDir } from "./test_temp.ts";
+import { buildCli, planOnboardTask } from "../../src/cli.ts";
+import { LocalStateStore } from "../../src/local_state.ts";
+import { makeTestDir } from "../unit/test_temp.ts";
 
 Deno.test("documents the stable CLI command groups", () => {
   assertEquals(

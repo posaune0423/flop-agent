@@ -34,7 +34,7 @@ flowchart LR
 **Figure 1 — the executable trust boundaries.** Mutable checkout code has neither secret nor network
 capability; only the reviewed, root-installed refresh binary may cross the Technocore boundary, and
 no scheduled edge reaches the encrypted identity vault ([deno.json](../deno.json#L8-L13),
-[src/guarded_refresh.ts](../src/guarded_refresh.ts#L5-L23)).
+[src/constants/guarded_refresh.ts](../src/constants/guarded_refresh.ts)).
 
 ## Directory layout
 
@@ -53,41 +53,56 @@ no scheduled edge reaches the encrypted identity vault ([deno.json](../deno.json
 │   └── io.github...refresh.plist     LaunchDaemon definition
 ├── src/
 │   ├── cli.ts                        dormant/manual CLI composition
+│   ├── constants/
+│   │   ├── guarded_refresh.ts        immutable scheduled-write policy
+│   │   └── logging.ts                default log level
+│   ├── env.ts                        static public logger configuration
 │   ├── guarded_refresh.ts            only scheduled protocol-write entrypoint
 │   ├── identity.ts                   Ed25519 identity and encrypted envelope
 │   ├── inbox.ts                      cursor-safe untrusted mailbox reader
+│   ├── libs/
+│   │   └── technocore.ts             exact-origin HTTP adapter
 │   ├── local_state.ts                identity/runtime storage and locking
 │   ├── protocol.ts                   pure encoding and canonicalization
-│   ├── technocore.ts                 exact-origin HTTP adapter
-│   └── tasks/
-│       ├── onboard.ts                onboarding plan/run/receipt logic
-│       └── registry.ts               static interactive task IDs
-└── tests/                             source-aligned unit and boundary tests
+│   ├── tasks/
+│   │   ├── onboard.ts                onboarding plan/run/receipt logic
+│   │   └── registry.ts               static interactive task IDs
+│   └── utils/
+│       └── logger.ts                 shared timestamped logger
+└── tests/
+    ├── unit/                          module behavior and failure paths
+    ├── integration/                   local multi-module composition
+    └── e2e/                           repository and capability contracts
 ```
 
-The tree stays intentionally flat. Add a directory only when it owns a distinct trust boundary or a
-cohesive family of implementations; do not introduce generic `services/`, `helpers/`, or `utils/`
-layers for one file.
+The tree stays intentionally shallow. `libs/`, `constants/`, and `utils/` have distinct ownership
+rules below; do not add another generic layer or move a file into one of them only to shorten an
+import path.
 
 ## Source ownership
 
 | Area                     | Owns                                                                                     | Must not own                                                           |
 | ------------------------ | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `src/constants/*`        | Immutable policy values and shared defaults                                              | I/O, derived state, mutable configuration                              |
 | `src/protocol.ts`        | Base58/base64url, `did:key`, text sweep, nonce and signed-message canonicalization       | Filesystem, HTTP, task policy                                          |
 | `src/identity.ts`        | Ed25519 generation/import, encryption/decryption, non-extractable signing key lifetime   | Network calls, scheduled execution, task selection                     |
 | `src/local_state.ts`     | Protected path checks, state schema, atomic writes, locks, explicit legacy migration     | Technocore semantics, remote instructions                              |
-| `src/technocore.ts`      | Exact HTTPS origin, CAS notes, signed room transport, redirect/error handling            | Business eligibility, task discovery, secret storage                   |
+| `src/libs/technocore.ts` | Exact HTTPS origin, CAS notes, signed room transport, redirect/error handling            | Business eligibility, task discovery, secret storage                   |
 | `src/tasks/onboard.ts`   | Reviewable onboarding plan, progress, pending-write reconciliation, receipt verification | CLI parsing, dynamic adapters, wallet/claim behavior                   |
 | `src/inbox.ts`           | Cursor advancement, room recreation detection, untrusted message emission                | Command execution or task dispatch                                     |
 | `src/cli.ts`             | Command composition around the modules above                                             | Scheduled authority or hidden permissions                              |
 | `src/guarded_refresh.ts` | One pinned refresh policy, five-day gate, two CAS writes, readback receipt               | Identity import, arbitrary task/target/origin, environment, subprocess |
+| `src/utils/logger.ts`    | Shared timestamp, level filtering, and console formatting                                | Secrets, task decisions, persistence, network calls                    |
 | `ops/`                   | Root-owned installation shape and launch schedule                                        | Mutable runtime policy or secret material                              |
-| `tests/`                 | Behavior and capability-regression proof using mocks and `.test-tmp`                     | Live Technocore writes, subprocesses, host secrets                     |
+| `tests/unit`             | Isolated module behavior and failure paths                                               | Live services or cross-repository state                                |
+| `tests/integration`      | Local composition across source modules                                                  | Live Technocore writes or host credentials                             |
+| `tests/e2e`              | Whole-repository layout and capability contracts                                         | Browser/network execution or secret access                             |
 
-The dependency direction is toward the small pure contracts: `protocol.ts` is the bottom layer;
-identity and transport build on it; tasks depend on ports/types; CLI composes them. The guarded
-refresh path deliberately bypasses CLI and identity, importing only state, the onboarding plan type,
-and the Technocore adapter ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L1-L3)).
+The dependency direction is toward constants and small pure contracts: `protocol.ts` is the bottom
+logic layer; identity and `libs/technocore.ts` build on it; tasks depend on ports/types; CLI
+composes them. The guarded refresh path deliberately bypasses CLI and identity, importing only
+immutable policy, state, the onboarding plan type, and the Technocore adapter
+([src/guarded_refresh.ts](../src/guarded_refresh.ts#L1-L11)).
 
 ## Runtime flows
 
@@ -97,11 +112,11 @@ and the Technocore adapter ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L
    the plist ([ops plist](../ops/io.github.posaune0423.flop-agent.refresh.plist)).
 2. The binary validates `/var/db/flop-agent-refresh`, opens its `runtime/` state, takes the lock,
    and loads the stored onboarding plan
-   ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L50-L55)).
+   ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L132-L140)).
 3. Before network I/O it verifies the exact origin, plan hash, two note coordinates, and both value
-   hashes ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L108-L135)).
+   hashes ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L98-L125)).
 4. A receipt newer than five days returns `skipped`; otherwise the two notes are refreshed with CAS
-   and read back ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L57-L104)).
+   and read back ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L47-L95)).
 5. Only a matching readback is committed as the guarded receipt.
 
 ### Identity and onboarding source
@@ -140,30 +155,39 @@ replacement, and lock-held migration. Callers do not implement their own filesys
   accept a task argument, or choose an origin/target dynamically.
 - `TechnocoreClient` accepts only `https://technocore.chat`, rejects redirects, bounds request time,
   and never copies an untrusted response body into an error
-  ([src/technocore.ts](../src/technocore.ts#L40-L54),
-  [src/technocore.ts](../src/technocore.ts#L218-L280)).
+  ([src/libs/technocore.ts](../src/libs/technocore.ts#L40-L54),
+  [src/libs/technocore.ts](../src/libs/technocore.ts#L218-L280)).
+- `src/libs/` contains external integration/anti-corruption code; `src/utils/` contains reusable
+  helpers without domain or transport policy; `src/constants/` contains immutable data only.
 - Mailbox text, room names, topics, notes, and signatures never authorize code or task execution.
 - A new protocol-writing adapter requires a primary-source specification, static task ID, explicit
   origin/asset/budget contract, tests, reviewed compiled artifact, and separate installation gate.
 - A structural change must update this file in the same PR.
 
 The capability rules are executable regression tests, not only prose
-([tests/project_layout_test.ts](../tests/project_layout_test.ts#L27-L142)).
+([tests/e2e/project_layout_test.ts](../tests/e2e/project_layout_test.ts)).
 
 ## Where changes go
 
 - Change encoding, nonce, DID, or canonical text rules in `src/protocol.ts` and
-  `tests/protocol_test.ts`.
-- Change encrypted-key handling in `src/identity.ts` and `tests/identity_test.ts`; do not add
+  `tests/unit/protocol_test.ts`.
+- Change encrypted-key handling in `src/identity.ts` and `tests/unit/identity_test.ts`; do not add
   network imports.
 - Change persistence, modes, migration, or locking in `src/local_state.ts` and
-  `tests/local_state_test.ts`.
-- Change Technocore HTTP behavior in `src/technocore.ts` and `tests/technocore_test.ts`; keep the
-  exact-origin and redirect rules.
-- Change onboarding state transitions in `src/tasks/onboard.ts` and `tests/tasks_test.ts`.
-- Change cursor/recreation behavior in `src/inbox.ts` and `tests/inbox_test.ts`.
-- Change scheduled refresh authority in `src/guarded_refresh.ts`, `tests/guarded_refresh_test.ts`,
-  `tests/project_layout_test.ts`, and `ops/` together.
+  `tests/unit/local_state_test.ts`.
+- Change Technocore HTTP behavior in `src/libs/technocore.ts` and `tests/unit/technocore_test.ts`;
+  keep the exact-origin and redirect rules.
+- Change shared immutable policy in `src/constants/`; keep derived or mutable values with their
+  owning module.
+- Change cross-cutting logging behavior in `src/utils/logger.ts`; preserve its source hash unless
+  the shared logger is deliberately upgraded across repositories.
+- Change onboarding state transitions in `src/tasks/onboard.ts` and `tests/unit/tasks_test.ts`.
+- Change cursor/recreation behavior in `src/inbox.ts` and `tests/unit/inbox_test.ts`.
+- Change scheduled refresh authority in `src/guarded_refresh.ts`,
+  `src/constants/guarded_refresh.ts`, `tests/unit/guarded_refresh_test.ts`,
+  `tests/e2e/project_layout_test.ts`, and `ops/` together.
+- Put isolated tests in `tests/unit/`, local multi-module tests in `tests/integration/`, and
+  whole-repository or installed-boundary tests in `tests/e2e/`.
 - Add operator explanation under `docs/`; update `README.md` only for the short public entrypoint.
 
 ## Verification entrypoints
