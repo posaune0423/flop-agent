@@ -29,6 +29,8 @@ Deno.test("agents load the structure ownership contract", async () => {
   const structure = await Deno.readTextFile(`${root}/docs/STRUCTURE.md`);
 
   assertEquals(agents.includes("Read `docs/STRUCTURE.md`"), true);
+  assertEquals(agents.includes("secret-scan"), true);
+  assertEquals(agents.includes("reachable Git history"), true);
   for (
     const section of [
       "## Overview",
@@ -117,6 +119,30 @@ Deno.test("ci validates the guarded binary and launchd plist", async () => {
     ),
     true,
   );
+});
+
+Deno.test("ci scans tracked files and reachable history for secrets", async () => {
+  const workflow = await Deno.readTextFile(`${root}/.github/workflows/ci.yml`);
+  const jobIndex = workflow.indexOf("  secret-scan:");
+
+  assertEquals(jobIndex >= 0, true);
+  const header = "  secret-scan:";
+  const afterHeader = workflow.slice(jobIndex + header.length);
+  const nextJobOffset = afterHeader.search(/\n  [a-z0-9-]+:\n/);
+  const job = nextJobOffset === -1
+    ? workflow.slice(jobIndex)
+    : workflow.slice(jobIndex, jobIndex + header.length + nextJobOffset);
+  assertEquals(job.includes("permissions:\n      contents: read"), true);
+  assertEquals(job.includes("fetch-depth: 0"), true);
+  assertEquals(
+    job.includes("gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e"),
+    true,
+  );
+  assertEquals(job.includes('GITLEAKS_ENABLE_COMMENTS: "false"'), true);
+  assertEquals(job.includes("GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"), true);
+  for (const bypass of ["continue-on-error", "|| true", "exit-code: 0"]) {
+    assertEquals(job.includes(bypass), false, bypass);
+  }
 });
 
 Deno.test("all Technocore clients share one production origin constant", async () => {

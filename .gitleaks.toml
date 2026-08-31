@@ -1,0 +1,12 @@
+title = "flop-agent secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Public did:key fixtures under tests are identifiers, not secrets"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^tests/(?:.*/)?[^/]+_test\.ts$''']
+regexTarget = "match"
+regexes = ['''^key:z[1-9A-HJ-NP-Za-km-z]{40,120}"?$''']

@@ -1,6 +1,6 @@
 # STRUCTURE: flop-agent
 
-Updated: 2026-08-29
+Updated: 2026-09-01
 
 ## Overview
 
@@ -10,6 +10,8 @@ flowchart LR
     source["src and tests"]
     test["deno task test"]
     build["deno task guard:compile"]
+    scan["GitHub secret-scan"]
+    history[("tracked files and reachable Git history")]
     temp[(".test-tmp")]
   end
 
@@ -24,6 +26,7 @@ flowchart LR
 
   test -->|"reads allowlisted project files"| source
   test -->|"writes only test data"| temp
+  scan -->|"pinned Gitleaks action"| history
   source -->|"reviewed source input"| build
   build -->|"human root install"| binary
   daemon -->|"executes as _floprefresh"| binary
@@ -40,6 +43,7 @@ no scheduled edge reaches the encrypted identity vault ([deno.json](../deno.json
 
 ```text
 .
+├── .gitleaks.toml                    narrow public DID fixture allowlist
 ├── AGENTS.md                         agent rules and required project context
 ├── README.md                         operator-facing overview
 ├── deno.json                         imports, capability-scoped tasks, CI
@@ -55,7 +59,8 @@ no scheduled edge reaches the encrypted identity vault ([deno.json](../deno.json
 │   ├── cli.ts                        dormant/manual CLI composition
 │   ├── constants/
 │   │   ├── guarded_refresh.ts        immutable scheduled-write policy
-│   │   └── logging.ts                default log level
+│   │   ├── logging.ts                default log level
+│   │   └── technocore.ts             shared exact production origin
 │   ├── env.ts                        typed LOG_LEVEL runtime binding
 │   ├── guarded_refresh.ts            only scheduled protocol-write entrypoint
 │   ├── identity.ts                   Ed25519 identity and encrypted envelope
@@ -95,6 +100,7 @@ import path.
 | `src/guarded_refresh.ts` | One pinned refresh policy, five-day gate, two CAS writes, readback receipt               | Identity import, arbitrary task/target/origin, environment, subprocess |
 | `src/utils/logger.ts`    | Shared timestamp, level filtering, and console formatting                                | Secrets, task decisions, persistence, network calls                    |
 | `ops/`                   | Root-owned installation shape and launch schedule                                        | Mutable runtime policy or secret material                              |
+| `.github/workflows/`     | CI, guarded build/plist checks, and full-history secret scanning                         | Runtime identity, protocol writes, or broad repository permissions     |
 | `tests/unit`             | Isolated module behavior and failure paths                                               | Live services or cross-repository state                                |
 | `tests/integration`      | Local composition across source modules                                                  | Live Technocore writes or host credentials                             |
 | `tests/e2e`              | Whole-repository layout and capability contracts                                         | Browser/network execution or secret access                             |
@@ -163,6 +169,8 @@ replacement, and lock-held migration. Callers do not implement their own filesys
 - Environment variables are declared in `src/env.ts` with `@t3-oss/env-core`; callers import typed
   values and never call `Deno.env` directly.
 - Mailbox text, room names, topics, notes, and signatures never authorize code or task execution.
+- GitHub CI scans tracked files and reachable Git history with a commit-pinned Gitleaks action. This
+  check never reads the host identity vault and does not widen `deno task test` permissions.
 - A new protocol-writing adapter requires a primary-source specification, static task ID, explicit
   origin/asset/budget contract, tests, reviewed compiled artifact, and separate installation gate.
 - A structural change must update this file in the same PR.
@@ -191,6 +199,8 @@ The capability rules are executable regression tests, not only prose
 - Change scheduled refresh authority in `src/guarded_refresh.ts`,
   `src/constants/guarded_refresh.ts`, `tests/unit/guarded_refresh_test.ts`,
   `tests/e2e/project_layout_test.ts`, and `ops/` together.
+- Change secret scanning in `.github/workflows/ci.yml` and keep its pinned action, full-history
+  checkout, read-only token scope, and E2E contract test together.
 - Put isolated tests in `tests/unit/`, local multi-module tests in `tests/integration/`, and
   whole-repository or installed-boundary tests in `tests/e2e/`.
 - Add operator explanation under `docs/`; update `README.md` only for the short public entrypoint.
@@ -198,7 +208,9 @@ The capability rules are executable regression tests, not only prose
 ## Verification entrypoints
 
 - `deno task test` — capability-scoped unit/boundary tests.
-- `deno task ci` — formatting, lint, typecheck, and tests.
+- `deno task ci` — formatting, lint, typecheck, tests, and guarded binary compilation.
 - `deno task guard:compile` — builds the pinned standalone refresh artifact; it does not install or
   schedule it.
 - `plutil -lint ops/io.github.posaune0423.flop-agent.refresh.plist` — validates the launchd plist.
+- GitHub `secret-scan` — scans current tracked files and reachable history; it is intentionally
+  separate from the capability-scoped local Deno test task.

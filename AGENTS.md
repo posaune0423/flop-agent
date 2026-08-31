@@ -64,6 +64,10 @@ statically reviewed future FLOP task adapters.
 - Run tests with `deno task test`; its permissions are deliberately limited to repository reads,
   `.test-tmp` writes, `LOG_LEVEL`, and UID metadata. Do not add subprocess, other environment,
   network, or host-wide filesystem permissions to make a test convenient.
+- Keep the GitHub `secret-scan` job fail-closed over tracked files and reachable Git history. Pin
+  the scanner action to a reviewed commit SHA, and never suppress a real finding merely to make CI
+  pass; stop, avoid printing the value, and rotate or revoke the exposed credential first. Keep any
+  false-positive allowlist rule-scoped, path-scoped, and shape-scoped.
 
 ## Development
 
