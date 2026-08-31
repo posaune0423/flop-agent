@@ -189,9 +189,10 @@ mailboxはmissing、lobby receiptはringのwindow外でした。これはephemer
 直後のreadbackで両方の一致を再確認しました。roomへのmessageは投稿していません。
 
 2026-09-01にcommunity field reportを監査し、tracked filesとreachable Git historyを検査する secret
-scanを[Issue #3](https://github.com/posaune0423/flop-agent/issues/3)として実装中です。公式
-Technocore exportを使う耐久証跡helperはIssue #4に分離しました。公式testnet/faucet/inference
-interfaceは依然未公表であり、推測adapterは追加しません。
+scanを[Issue #3](https://github.com/posaune0423/flop-agent/issues/3)として実装済みで、
+[PR #5](https://github.com/posaune0423/flop-agent/pull/5)のmerge待ちです。公式Technocore
+exportを使う 耐久証跡helperはIssue #4に分離しました。公式testnet/faucet/inference
+interfaceは依然未公表であり、 推測adapterは追加しません。
 
 ## 一次資料
 

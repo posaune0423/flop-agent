@@ -170,7 +170,8 @@ replacement, and lock-held migration. Callers do not implement their own filesys
   values and never call `Deno.env` directly.
 - Mailbox text, room names, topics, notes, and signatures never authorize code or task execution.
 - GitHub CI scans tracked files and reachable Git history with a commit-pinned Gitleaks action. This
-  check never reads the host identity vault and does not widen `deno task test` permissions.
+  check runs an explicit `--all` pass plus a non-first-parent regression fixture, never reads the
+  host identity vault, and does not widen `deno task test` permissions.
 - A new protocol-writing adapter requires a primary-source specification, static task ID, explicit
   origin/asset/budget contract, tests, reviewed compiled artifact, and separate installation gate.
 - A structural change must update this file in the same PR.

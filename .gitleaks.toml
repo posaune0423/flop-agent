@@ -9,4 +9,7 @@ targetRules = ["generic-api-key"]
 condition = "AND"
 paths = ['''^tests/(?:.*/)?[^/]+_test\.ts$''']
 regexTarget = "match"
-regexes = ['''^key:z[1-9A-HJ-NP-Za-km-z]{40,120}"?$''']
+regexes = [
+  '''^key:z6Mkv1o2GEgtXjFdEMfLtupcKhGRydM8V7VHzii7Uh4aHoqH"?$''',
+  '''^key:z6MkwfNUQw8XipdgYceYRaiQxRue5k61sxHeZdQuLYQJH1Wj"?$''',
+]

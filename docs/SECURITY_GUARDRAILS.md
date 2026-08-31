@@ -44,8 +44,11 @@ have no other environment, network, subprocess, FFI, or host-wide filesystem cap
 
 GitHub CI checks both current tracked files and reachable Git history with a commit-pinned Gitleaks
 action. The job has read-only repository permission, disables PR comments, and does not inspect the
-identity vault or widen local Deno permissions. A finding is a stop-and-rotate event; it must not be
-printed, allowlisted, or rewritten away before the affected credential is revoked.
+identity vault or widen local Deno permissions. A real finding is a stop-and-rotate event; it must
+not be printed, allowlisted, or rewritten away before the affected credential is revoked.
+
+The action's event-range scan is followed by an explicit `--all` scan. A temporary regression
+repository proves that a non-first-parent finding removed from the final tree still fails detection.
 
 The only repository allowlist entry targets the `generic-api-key` rule when both the
 historical/current path is a test file and the match has the exact public `did:key` fixture shape.

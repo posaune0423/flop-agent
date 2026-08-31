@@ -139,10 +139,34 @@ Deno.test("ci scans tracked files and reachable history for secrets", async () =
     true,
   );
   assertEquals(job.includes('GITLEAKS_ENABLE_COMMENTS: "false"'), true);
+  assertEquals(job.includes('GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"'), true);
+  assertEquals(job.includes('GITLEAKS_ENABLE_SUMMARY: "false"'), true);
+  assertEquals(job.includes('GITLEAKS_VERSION: "8.30.1"'), true);
   assertEquals(job.includes("GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"), true);
+  assertEquals(job.includes('gitleaks git --log-opts="--all" --redact=100 --no-banner .'), true);
+  assertEquals(job.includes("tests/e2e/gitleaks_full_history.sh"), true);
   for (const bypass of ["continue-on-error", "|| true", "exit-code: 0"]) {
     assertEquals(job.includes(bypass), false, bypass);
   }
+
+  const config = await Deno.readTextFile(`${root}/.gitleaks.toml`);
+  const publicDidPatterns = [
+    '^key:z6Mkv1o2GEgtXjFdEMfLtupcKhGRydM8V7VHzii7Uh4aHoqH"?$',
+    '^key:z6MkwfNUQw8XipdgYceYRaiQxRue5k61sxHeZdQuLYQJH1Wj"?$',
+  ];
+  for (const pattern of publicDidPatterns) {
+    assertEquals(config.includes(`'''${pattern}'''`), true, pattern);
+  }
+  assertEquals(config.includes("{40,120}"), false);
+  assertEquals(
+    publicDidPatterns.some((pattern) => new RegExp(pattern).test(`key:z${"1".repeat(48)}`)),
+    false,
+  );
+
+  const coverage = await Deno.readTextFile(`${root}/tests/e2e/gitleaks_full_history.sh`);
+  assertEquals(coverage.includes("merge --no-ff"), true);
+  assertEquals(coverage.includes('--log-opts="--all"'), true);
+  assertEquals(coverage.includes("--exit-code=42"), true);
 });
 
 Deno.test("all Technocore clients share one production origin constant", async () => {
