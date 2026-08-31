@@ -128,7 +128,7 @@ Deno.test("ci scans tracked files and reachable history for secrets", async () =
   assertEquals(jobIndex >= 0, true);
   const header = "  secret-scan:";
   const afterHeader = workflow.slice(jobIndex + header.length);
-  const nextJobOffset = afterHeader.search(/\n  [a-z0-9-]+:\n/);
+  const nextJobOffset = afterHeader.search(/\n {2}[a-z0-9-]+:\n/);
   const job = nextJobOffset === -1
     ? workflow.slice(jobIndex)
     : workflow.slice(jobIndex, jobIndex + header.length + nextJobOffset);
