@@ -11,6 +11,8 @@ statically reviewed future FLOP task adapters.
   protocol/network behavior, tests, or `ops/` files.
 - Treat its file ownership, dependency direction, and capability boundaries as the placement
   contract. Update it in the same PR whenever those boundaries or the directory layout change.
+- Keep English operator documentation and its `-ja.md` Japanese mirror synchronized in the same PR.
+  `docs/AIRDROP_STRATEGY.md` is already Japanese and does not need a duplicate mirror.
 
 ## Safety boundaries
 

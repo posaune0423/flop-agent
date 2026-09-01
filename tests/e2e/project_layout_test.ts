@@ -45,6 +45,91 @@ Deno.test("agents load the structure ownership contract", async () => {
   }
 });
 
+Deno.test("ships complete Japanese operator documentation with language links", async () => {
+  const englishPaths = ["README.md", "ops/README.md"];
+  for await (const entry of Deno.readDir(`${root}/docs`)) {
+    if (
+      entry.isFile && entry.name.endsWith(".md") && !entry.name.endsWith("-ja.md") &&
+      entry.name !== "AIRDROP_STRATEGY.md"
+    ) {
+      englishPaths.push(`docs/${entry.name}`);
+    }
+  }
+  englishPaths.sort();
+
+  for (const englishPath of englishPaths) {
+    const separator = englishPath.lastIndexOf("/");
+    const directory = separator >= 0 ? englishPath.slice(0, separator + 1) : "";
+    const englishName = englishPath.slice(separator + 1);
+    const japaneseName = englishName.replace(/\.md$/, "-ja.md");
+    const japanesePath = `${directory}${japaneseName}`;
+    assertEquals(await exists(`${root}/${japanesePath}`), true, japanesePath);
+    const english = await Deno.readTextFile(`${root}/${englishPath}`);
+    const japanese = await Deno.readTextFile(`${root}/${japanesePath}`);
+    assertEquals(english.includes(`[日本語](${japaneseName})`), true, englishPath);
+    assertEquals(japanese.includes(`[English](${englishName})`), true, japanesePath);
+
+    const headingLevels = (document: string) =>
+      [...document.matchAll(/^(#{1,6})\s+/gm)].map((match) => match[1].length);
+    assertEquals(headingLevels(japanese), headingLevels(english), `${japanesePath}:headings`);
+    const executableBlocks = (document: string) =>
+      [...document.matchAll(/```(?:sh|bash|zsh)\n[\s\S]*?```/g)].map((match) => match[0]);
+    assertEquals(
+      executableBlocks(japanese),
+      executableBlocks(english),
+      `${japanesePath}:executable code blocks`,
+    );
+  }
+
+  const requiredSections = {
+    "README-ja.md": [
+      "## できること",
+      "## 必要条件",
+      "## 環境変数",
+      "## メールボックス",
+      "## 公開 note の更新",
+      "## 将来の FLOP タスクの追加",
+      "## 開発",
+      "## セキュリティモデル",
+      "## 情報源",
+      "## ライセンス",
+    ],
+    "docs/STRUCTURE-ja.md": [
+      "## 概要",
+      "## ディレクトリ構成",
+      "## ソースの責務",
+      "## 実行時フロー",
+      "## 状態とシークレットの保存場所",
+      "## 依存関係と権限のルール",
+      "## 変更先の判断",
+      "## 検証エントリーポイント",
+    ],
+    "docs/SECURITY_GUARDRAILS-ja.md": [
+      "## 目的",
+      "## 実装済みの制御",
+      "### リポジトリのシークレットスキャン",
+      "### 決定的なrefresh",
+      "## 特権インストール境界",
+      "## 人間が行う必要があるKeychain操作",
+      "## 残存リスク",
+    ],
+    "ops/README-ja.md": [
+      "## 前提条件",
+      "## インストール時の所有権境界",
+      "## スケジュールの意味",
+      "## 人間による有効化",
+      "## 検証",
+      "## ロールバック",
+    ],
+  } as const;
+  for (const [path, sections] of Object.entries(requiredSections)) {
+    const document = await Deno.readTextFile(`${root}/${path}`);
+    for (const section of sections) {
+      assertEquals(document.includes(section), true, `${path}:${section}`);
+    }
+  }
+});
+
 Deno.test("uses the standard libs, constants, utils, and test-suite layout", async () => {
   for (
     const required of [

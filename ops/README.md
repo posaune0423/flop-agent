@@ -1,5 +1,7 @@
 # Root-owned guarded refresh installation
 
+[日本語](README-ja.md)
+
 Do not run these steps from Codex or another agent-controlled terminal. They cross the administrator
 boundary and must be executed only after reviewing and merging the exact commit being installed.
 
@@ -50,11 +52,25 @@ After installing and hashing the exact reviewed files from a non-agent administr
 ```sh
 sudo launchctl bootstrap system \
   /Library/LaunchDaemons/io.github.posaune0423.flop-agent.refresh.plist
-sudo launchctl kickstart system/io.github.posaune0423.flop-agent.refresh
+service_pid="$(sudo launchctl kickstart -p system/io.github.posaune0423.flop-agent.refresh)"
+attempts=0
+while sudo kill -0 "${service_pid}" 2>/dev/null; do
+  attempts=$((attempts + 1))
+  if [ "${attempts}" -ge 60 ]; then
+    echo "guarded refresh did not exit within 60 seconds" >&2
+    exit 1
+  fi
+  sleep 1
+done
+sudo launchctl print system/io.github.posaune0423.flop-agent.refresh
+sudo tail -n 1 /var/db/flop-agent-refresh/runtime/stdout.log
+sudo tail -n 1 /var/db/flop-agent-refresh/runtime/stderr.log
 ```
 
-Do not run these commands from Codex. The initial kickstart must finish with either a verified
-refresh receipt or a deliberate five-day-gate `skipped` result before relying on the calendar slots.
+Do not run these commands from Codex. Do not rely on the calendar slots until the kicked process has
+exited, `launchctl print` reports a successful last exit, the last stdout JSON has `status` equal to
+`refreshed` or `skipped`, and stderr contains no newer error. A `refreshed` result must also have
+its matching receipt and readback verified.
 
 ## Verification
 
