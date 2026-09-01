@@ -16,7 +16,7 @@ flowchart LR
   end
 
   subgraph service["Root-owned refresh service"]
-    daemon["LaunchDaemon"]
+    daemon["LaunchDaemon<br/>00:43 / 06:43 / 12:43 / 18:43"]
     binary["compiled guarded_refresh"]
     runtime[("/var/db/flop-agent-refresh/runtime")]
   end
@@ -115,15 +115,18 @@ immutable policy, state, the onboarding plan type, and the Technocore adapter
 
 ### Guarded refresh
 
-1. Launchd starts the root-owned binary directly as `_floprefresh`; no shell or checkout path is in
-   the plist ([ops plist](../ops/io.github.posaune0423.flop-agent.refresh.plist)).
+1. launchd offers four six-hour calendar slots and starts the root-owned binary directly as
+   `_floprefresh`; no shell, checkout path, `KeepAlive`, or `RunAtLoad` is in the plist
+   ([ops plist](../ops/io.github.posaune0423.flop-agent.refresh.plist)). Sleep-time events coalesce
+   into one wake-time run; shutdown time is not covered.
 2. The binary validates `/var/db/flop-agent-refresh`, opens its `runtime/` state, takes the lock,
    and loads the stored onboarding plan
    ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L132-L140)).
 3. Before network I/O it verifies the exact origin, plan hash, two note coordinates, and both value
    hashes ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L98-L125)).
-4. A receipt newer than five days returns `skipped`; otherwise the two notes are refreshed with CAS
-   and read back ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L47-L95)).
+4. A receipt newer than five days returns `skipped` before network I/O; otherwise the two notes are
+   refreshed with CAS and read back ([src/guarded_refresh.ts](../src/guarded_refresh.ts#L47-L95)). A
+   failed due run saves no success receipt, so the next six-hour slot can retry safely.
 5. Only a matching readback is committed as the guarded receipt.
 
 ### Identity and onboarding source
@@ -160,6 +163,8 @@ replacement, and lock-held migration. Callers do not implement their own filesys
   filesystem capability; `LOG_LEVEL` is their only environment allowlist entry.
 - `src/guarded_refresh.ts` must not import `cli.ts` or `identity.ts`, inspect environment variables,
   accept a task argument, or choose an origin/target dynamically.
+- The LaunchDaemon must remain a short-lived calendar job with four bounded retry opportunities per
+  day. Do not add `KeepAlive`, `RunAtLoad`, a shell, or a mutable checkout target.
 - `TechnocoreClient` accepts only `https://technocore.chat`, rejects redirects, bounds request time,
   and never copies an untrusted response body into an error
   ([src/libs/technocore.ts](../src/libs/technocore.ts#L40-L54),

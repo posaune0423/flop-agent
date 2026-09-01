@@ -53,7 +53,7 @@ wallet、claimの確定仕様はまだ公開されていません。配布枚数
   airdropのSybil/scoring ruleではありません。
 - Technocore v0.11.0は、retained room ringをbyte-exact JSONLで返す `GET /r/<room>/export`、signed
   recordの`sig`保持、room `generation`を追加しました。現在の
-  公式latestはv0.11.1です。Eviction前に取得したrecordは`room|nonce|text`をoffline検証できますが、
+  公式latestはv0.11.2です。Eviction前に取得したrecordは`room|nonce|text`をoffline検証できますが、
   既にevictされたrecordを復旧したり、airdrop適格性を証明したりはできません。
 
 ## X上の主張の扱い
@@ -81,6 +81,7 @@ disk budgetを先にcontract化します。
 現時点で、次の主張を支持する公式根拠はありません。
 
 - lobbyへの日次・週次heartbeat回数が配分を増やす
+- 24/7 uptimeやalways-on observer自体が配分を増やす
 - DIDを複数作れば配分が増える
 - Xのlike、follow、reply数が配点される
 - 第三者のclaim、wallet connect、seed入力、referral siteが公式である
@@ -91,7 +92,8 @@ disk budgetを先にcontract化します。
 ### Phase 0: Testnet公開前
 
 1. 1つのDIDを継続利用し、encrypted identityとbackupを保持する。
-2. 既存profileとcontribution noteだけを5日ごとに同値CAS refreshし、readbackする。
+2. Root-owned schedulerは6時間ごとに固定binaryを起動し、5日未満ならnetwork I/Oなしでskipする。
+   Due時だけ既存profileとcontribution noteを同値CAS refreshし、readbackする。
 3. lobby/mailboxへの反復投稿は行わない。新しい有用な成果物があるときだけ、別途review済み
    adapterと明示的なlocal `task run <known-id>` を用いる。
 4. 公式teaser、Yellow Paper、公式X、公式GitHubを監視し、以下の公開を最優先で検知する。
@@ -144,17 +146,17 @@ ruleが揃うまで自動申請・購入・node起動は行いません。
 
 ## KPI
 
-| KPI                           | 目的                        | 現時点の扱い     |
-| ----------------------------- | --------------------------- | ---------------- |
-| 公式spec freshness            | 早期参加の取りこぼし防止    | 毎日監視         |
-| profile/contribution readback | DIDと貢献証跡の継続         | 5日ごとにrefresh |
-| valid inference spend         | 公式agent配分の主要signal   | Testnet開始後    |
-| successful inference rate     | 無効消費の削減              | Testnet開始後    |
-| unique useful workloads       | spam/Sybil riskを抑えた利用 | Testnet開始後    |
-| prize tasks completed         | 未公表の追加配分候補        | 公式task公開後   |
-| spend/unlock liability        | 受取量と流動性の分離        | 3:1で管理        |
-| fiat/GPU/ops cost             | 純期待値の管理              | 自動支出なし     |
-| durable signed evidence       | ring eviction後の検証可能性 | Issue #4で設計中 |
+| KPI                           | 目的                        | 現時点の扱い                   |
+| ----------------------------- | --------------------------- | ------------------------------ |
+| 公式spec freshness            | 早期参加の取りこぼし防止    | 毎日監視                       |
+| profile/contribution readback | DIDと貢献証跡の継続         | 6時間schedule/5日readback gate |
+| valid inference spend         | 公式agent配分の主要signal   | Testnet開始後                  |
+| successful inference rate     | 無効消費の削減              | Testnet開始後                  |
+| unique useful workloads       | spam/Sybil riskを抑えた利用 | Testnet開始後                  |
+| prize tasks completed         | 未公表の追加配分候補        | 公式task公開後                 |
+| spend/unlock liability        | 受取量と流動性の分離        | 3:1で管理                      |
+| fiat/GPU/ops cost             | 純期待値の管理              | 自動支出なし                   |
+| durable signed evidence       | ring eviction後の検証可能性 | Issue #4で設計中               |
 
 ## 自動化
 
@@ -172,7 +174,8 @@ installが完了するまで自動refreshは再開しません。
 
 実機には`_floprefresh` user、root-owned binary/plist、`/var/db/flop-agent-refresh`、loaded serviceの
 いずれも存在しません。したがって、現在は「安全に停止中」であり、schedule taskが正常稼働している
-状態ではありません。旧`Technocore証跡維持` LLM cronは再利用せず、将来の5日間隔実行は
+状態ではありません。旧`Technocore証跡維持` LLM cronは再利用せず、将来は
+[Issue #6](https://github.com/posaune0423/flop-agent/issues/6) の4-slot
 LaunchDaemonだけが担当します。
 
 公式情報の調査は手動で開始し、wallet、faucet、claim、mainnet、real-token/fiat spend、X投稿、 lobby
@@ -189,8 +192,8 @@ mailboxはmissing、lobby receiptはringのwindow外でした。これはephemer
 直後のreadbackで両方の一致を再確認しました。roomへのmessageは投稿していません。
 
 2026-09-01にcommunity field reportを監査し、tracked filesとreachable Git historyを検査する secret
-scanを[Issue #3](https://github.com/posaune0423/flop-agent/issues/3)として実装済みで、
-[PR #5](https://github.com/posaune0423/flop-agent/pull/5)のmerge待ちです。公式Technocore
+scanを[Issue #3](https://github.com/posaune0423/flop-agent/issues/3)として実装し、
+[PR #5](https://github.com/posaune0423/flop-agent/pull/5)でmerge済みです。公式Technocore
 exportを使う 耐久証跡helperはIssue #4に分離しました。公式testnet/faucet/inference
 interfaceは依然未公表であり、 推測adapterは追加しません。
 
@@ -199,6 +202,7 @@ interfaceは依然未公表であり、 推測adapterは追加しません。
 - [FLOP official landing page](https://flop.finance/)
 - [The Flop Network — Teaser v0.1](https://flop.finance/teaser/)
 - [Official Technocore repository](https://github.com/flop-labs/technocore-chat)
+- [Technocore v0.11.2 release](https://github.com/flop-labs/technocore-chat/releases/tag/v0.11.2)
 - [Technocore v0.11.0 export release](https://github.com/flop-labs/technocore-chat/commit/cbc6f6d41f5c02888d7f428678f6df25e41edfc7)
 - [Official export verification tests](https://github.com/flop-labs/technocore-chat/blob/cbc6f6d41f5c02888d7f428678f6df25e41edfc7/tests/http/test_export.py)
 - [Technocore authentication and registration boundaries](https://technocore.chat/auth.md)

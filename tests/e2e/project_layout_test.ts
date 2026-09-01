@@ -262,6 +262,28 @@ Deno.test("scheduled refresh builds as a fixed root-installable capability binar
   assertEquals(plist.includes("_floprefresh"), true);
   assertEquals(plist.includes("/bin/sh"), false);
   assertEquals(plist.includes(root), false);
+  assertEquals(plist.includes("<key>KeepAlive</key>"), false);
+  assertEquals(plist.includes("<key>RunAtLoad</key>"), false);
+
+  const calendar = plist.match(
+    /<key>StartCalendarInterval<\/key>\s*<array>([\s\S]*?)<\/array>/,
+  )?.[1];
+  assertEquals(typeof calendar, "string");
+  const slotPattern =
+    /<dict>\s*<key>Hour<\/key>\s*<integer>(\d+)<\/integer>\s*<key>Minute<\/key>\s*<integer>(\d+)<\/integer>\s*<\/dict>/g;
+  const slotMatches = [...calendar!.matchAll(slotPattern)];
+  assertEquals(slotMatches.length, 4);
+  assertEquals(calendar!.replace(slotPattern, "").trim(), "");
+  const slots = slotMatches.map((match) => ({
+    hour: Number(match[1]),
+    minute: Number(match[2]),
+  }));
+  assertEquals(slots, [
+    { hour: 0, minute: 43 },
+    { hour: 6, minute: 43 },
+    { hour: 12, minute: 43 },
+    { hour: 18, minute: 43 },
+  ]);
 });
 
 Deno.test("mutable source tasks have no protocol network capability", async () => {

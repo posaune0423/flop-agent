@@ -85,6 +85,12 @@ rejected, and untrusted response bodies are not copied into logs.
 
 It has no identity, environment, subprocess, FFI, shell, GitHub, or arbitrary host capability.
 
+The plist offers calendar runs at 00:43, 06:43, 12:43, and 18:43. The five-day receipt gate returns
+`skipped` before network I/O on ordinary runs, while a due failure gets another opportunity within
+six hours. `KeepAlive` and `RunAtLoad` are absent; a human administrator performs one explicit
+kickstart after installation. launchd coalesces sleep-time calendar events on wake, but cannot run
+while the host is shut down.
+
 ## Privileged installation boundary
 
 The compiled artifact is not automatically installed. A production schedule is enabled only after
