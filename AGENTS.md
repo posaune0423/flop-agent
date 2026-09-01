@@ -58,6 +58,8 @@ statically reviewed future FLOP task adapters.
   must never be the installed scheduler target.
 - A production schedule requires a root-owned binary and plist plus a dedicated non-login
   `_floprefresh` account. Do not use a user LaunchAgent or `sandbox-exec` as the primary boundary.
+- Keep the guarded refresh process short-lived. The plist may provide bounded calendar retry slots,
+  but must not use `KeepAlive` or `RunAtLoad`; installation performs one explicit human kickstart.
 - Identity creation, inspection, backup, migration, unlock, and signing require a separately
   reviewed immutable helper or signer service. Never retrieve the Keychain passphrase, unlock
   identity, or pass signing authority from an LLM or scheduled process.

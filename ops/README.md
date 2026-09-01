@@ -32,11 +32,36 @@ Use `install(1)` with the exact owners and modes rather than executing an instal
 mutable checkout. Then validate the plist with `plutil -lint` and load it into launchd's `system`
 domain. The supplied plist invokes the binary directly—there is no shell and no checkout path.
 
+## Schedule semantics
+
+The plist offers four calendar runs at 00:43, 06:43, 12:43, and 18:43. The binary still enforces its
+five-day receipt gate, so ordinary runs stop before network I/O. If a due run fails before a
+verified receipt is saved, the next six-hour slot can retry without weakening the fixed origin,
+plan, target, or value policy.
+
+`StartCalendarInterval` coalesces missed sleep-time slots into one run when macOS wakes. It does not
+provide execution while the host is shut down. `KeepAlive` is deliberately absent because this is a
+short-lived job, and `RunAtLoad` is omitted in favor of one explicit post-install kickstart.
+
+## Human activation
+
+After installing and hashing the exact reviewed files from a non-agent administrator terminal:
+
+```sh
+sudo launchctl bootstrap system \
+  /Library/LaunchDaemons/io.github.posaune0423.flop-agent.refresh.plist
+sudo launchctl kickstart system/io.github.posaune0423.flop-agent.refresh
+```
+
+Do not run these commands from Codex. The initial kickstart must finish with either a verified
+refresh receipt or a deliberate five-day-gate `skipped` result before relying on the calendar slots.
+
 ## Verification
 
 Verify all of the following before leaving the daemon loaded:
 
 - launchd reports `UserName = _floprefresh` and the root-owned binary path.
+- launchd reports the four expected calendar intervals and no `KeepAlive` or `RunAtLoad` key.
 - binary and plist hashes match the reviewed release artifacts.
 - service runtime contains no encrypted identity or unrelated file.
 - a due run updates only the two approved notes and records a matching readback receipt.
