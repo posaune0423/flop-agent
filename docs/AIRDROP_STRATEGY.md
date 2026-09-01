@@ -1,6 +1,6 @@
 # $FLOP Airdrop Strategy
 
-最終調査日: 2026-08-29 (Asia/Tokyo)
+最終調査日: 2026-09-01 (Asia/Tokyo)
 
 ## 結論
 
@@ -51,6 +51,10 @@ wallet、claimの確定仕様はまだ公開されていません。配布枚数
 - Technocoreには現時点でtoken、faucet、registration、provisioning、claim endpointは ありません。
 - 公式serviceは重複投稿やrateを制限しますが、これはtransportのabuse controlであり、
   airdropのSybil/scoring ruleではありません。
+- Technocore v0.11.0は、retained room ringをbyte-exact JSONLで返す `GET /r/<room>/export`、signed
+  recordの`sig`保持、room `generation`を追加しました。現在の
+  公式latestはv0.11.1です。Eviction前に取得したrecordは`room|nonce|text`をoffline検証できますが、
+  既にevictされたrecordを復旧したり、airdrop適格性を証明したりはできません。
 
 ## X上の主張の扱い
 
@@ -62,6 +66,17 @@ Arthur Hayesは[この案内を返信で増幅](https://x.com/CryptoHayes/status
 しましたが、その返信だけで記事中の全条件が公式化されたとは解釈しません。一方、
 [DID必須taskへのairdrop報酬](https://x.com/CryptoHayes/status/2092163906537918944)は本人の
 直接投稿です。
+
+[MinerMaru73の2026-08-31投稿](https://x.com/minermaru73/status/2094380442913038694)は、community
+実装 [technocore-safe-agent](https://github.com/hanamaru777/technocore-safe-agent) の24/7運用、
+Observer/Signer分離、state compaction、曖昧POSTの非再送、reboot recovery、secret scan、耐久証跡を
+報告しています。公開repositoryとCIで多くの実装は確認できましたが、これはFLOP Labs公式toolでも
+配点条件でもありません。
+
+本agentへ取り込むのは、現行scopeに合うfull-history secret scanと、将来のsigned contribution向け
+export evidence設計だけです。Resident、autopilot、unknown DIDへの自動返信、cloud signerは、権限と
+attack surfaceを増やすため導入しません。継続observerを将来追加する場合に限り、state cardinalityと
+disk budgetを先にcontract化します。
 
 現時点で、次の主張を支持する公式根拠はありません。
 
@@ -87,6 +102,10 @@ Arthur Hayesは[この案内を返信で増幅](https://x.com/CryptoHayes/status
    - score、cap、Sybil、prize、snapshot、claim条件
 5. KOL/creator、GPU provider、validatorの公式interest formは別laneとして評価する。個人情報、
    hardware、運用費の判断が必要なので自動送信しない。送信自体は選考やtoken配分を保証しません。
+6. 将来の有用なsigned room contributionは、confirmed seq取得直後に公式exportから公開署名recordを
+   captureし、offline検証可能な証跡をexclusive-createで保存する。実装は
+   [Issue #4](https://github.com/posaune0423/flop-agent/issues/4) のread-only helper
+   contractに従い、 capture失敗を理由にPOSTを再送しない。
 
 ### Phase 1: 公式testnet仕様公開時
 
@@ -135,10 +154,11 @@ ruleが揃うまで自動申請・購入・node起動は行いません。
 | prize tasks completed         | 未公表の追加配分候補        | 公式task公開後   |
 | spend/unlock liability        | 受取量と流動性の分離        | 3:1で管理        |
 | fiat/GPU/ops cost             | 純期待値の管理              | 自動支出なし     |
+| durable signed evidence       | ring eviction後の検証可能性 | Issue #4で設計中 |
 
 ## 自動化
 
-2026-08-29のsecurity auditで、local Codex automationはLLMと同じmacOS user権限を持ち、
+2026-09-01の再検証でも、local Codex automationはLLMと同じmacOS user権限を持ち、
 promptだけでは秘密鍵やPC内fileへのaccessを防げないと確認しました。次の3件はすべてPAUSEDです。
 
 - `FLOP公式情報監視`
@@ -149,6 +169,11 @@ promptだけでは秘密鍵やPC内fileへのaccessを防げないと確認し�
 Binaryはidentity path、environment、subprocess、他hostへのcapabilityを持ちません。root-owned
 binary、 専用`_floprefresh` user、LaunchDaemonのadmin
 installが完了するまで自動refreshは再開しません。
+
+実機には`_floprefresh` user、root-owned binary/plist、`/var/db/flop-agent-refresh`、loaded serviceの
+いずれも存在しません。したがって、現在は「安全に停止中」であり、schedule taskが正常稼働している
+状態ではありません。旧`Technocore証跡維持` LLM cronは再利用せず、将来の5日間隔実行は
+LaunchDaemonだけが担当します。
 
 公式情報の調査は手動で開始し、wallet、faucet、claim、mainnet、real-token/fiat spend、X投稿、 lobby
 heartbeatやGitHub writeへ自動接続しません。
@@ -163,16 +188,23 @@ mailboxはmissing、lobby receiptはringのwindow外でした。これはephemer
 同日15:23 JSTに、review済みの `technocore-refresh` が既存2 noteだけを同値CASで更新し、
 直後のreadbackで両方の一致を再確認しました。roomへのmessageは投稿していません。
 
-Agent実装の変更は現時点では不要です。公式testnet/faucet/inference interfaceが未公表であり、
-推測実装は安全性と適格性を下げます。interface公開を検知した時点でissueを作り、adapterをPR化します。
+2026-09-01にcommunity field reportを監査し、tracked filesとreachable Git historyを検査する secret
+scanを[Issue #3](https://github.com/posaune0423/flop-agent/issues/3)として実装済みで、
+[PR #5](https://github.com/posaune0423/flop-agent/pull/5)のmerge待ちです。公式Technocore
+exportを使う 耐久証跡helperはIssue #4に分離しました。公式testnet/faucet/inference
+interfaceは依然未公表であり、 推測adapterは追加しません。
 
 ## 一次資料
 
 - [FLOP official landing page](https://flop.finance/)
 - [The Flop Network — Teaser v0.1](https://flop.finance/teaser/)
 - [Official Technocore repository](https://github.com/flop-labs/technocore-chat)
+- [Technocore v0.11.0 export release](https://github.com/flop-labs/technocore-chat/commit/cbc6f6d41f5c02888d7f428678f6df25e41edfc7)
+- [Official export verification tests](https://github.com/flop-labs/technocore-chat/blob/cbc6f6d41f5c02888d7f428678f6df25e41edfc7/tests/http/test_export.py)
 - [Technocore authentication and registration boundaries](https://technocore.chat/auth.md)
 - [Technocore protocol manual](https://technocore.chat/llms.txt)
 - [FLOP KOL/creator interest form](https://flop.finance/apply/kol)
 - [Arthur Hayes: DID-gated tasks](https://x.com/CryptoHayes/status/2092163906537918944)
 - [Tat Thang article link](https://x.com/tatthang/status/2091894656191864981)
+- [MinerMaru73 field report post](https://x.com/minermaru73/status/2094380442913038694)
+- [Community implementation referenced by the post](https://github.com/hanamaru777/technocore-safe-agent)

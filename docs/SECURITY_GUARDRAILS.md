@@ -1,6 +1,6 @@
 # Security Guardrails
 
-Last verified: 2026-08-29 (Asia/Tokyo)
+Last verified: 2026-09-01 (Asia/Tokyo)
 
 ## Objective
 
@@ -15,8 +15,8 @@ runtime, and OS capabilities outside LLM inference.
 - Global Codex defaults are `approval_policy = "on-request"` and `sandbox_mode = "workspace-write"`
   for new sessions.
 - All three local FLOP LLM automations are `PAUSED`.
-- The current session was started before that global change and retains its original permissions;
-  restart Codex before treating the new defaults as active.
+- This verification session still has unrestricted local filesystem authority. Prompt rules and a
+  `PAUSED` automation state reduce accidental execution but do not constrain that host authority.
 
 ### Secret/runtime separation
 
@@ -39,6 +39,20 @@ require separately reviewed immutable artifacts; only guarded refresh currently 
 
 Tests have repository read, `.test-tmp` write, validated `LOG_LEVEL`, and UID metadata only. They
 have no other environment, network, subprocess, FFI, or host-wide filesystem capability.
+
+### Repository secret scanning
+
+GitHub CI checks both current tracked files and reachable Git history with a commit-pinned Gitleaks
+action. The job has read-only repository permission, disables PR comments, and does not inspect the
+identity vault or widen local Deno permissions. A real finding is a stop-and-rotate event; it must
+not be printed, allowlisted, or rewritten away before the affected credential is revoked.
+
+The action's event-range scan is followed by an explicit `--all` scan. A temporary regression
+repository proves that a non-first-parent finding removed from the final tree still fails detection.
+
+The only repository allowlist entry targets the `generic-api-key` rule when both the
+historical/current path is a test file and the match has the exact public `did:key` fixture shape.
+It does not exclude a commit, disable the generic rule, or permit the same shape outside tests.
 
 ### Key material lifetime
 
@@ -84,6 +98,10 @@ terminal:
 
 A user LaunchAgent is not an OS isolation boundary and must not be used.
 
+The 2026-09-01 read-only host check found no `_floprefresh` user, installed binary, LaunchDaemon
+plist, service root, or loaded launchd service. Therefore the protected refresh schedule is not
+installed or running, and the three LLM automations remain paused.
+
 ## Keychain action still requiring the human
 
 A generic-password item for the identity passphrase already exists in the login Keychain. Its secret
@@ -102,6 +120,8 @@ environment variables, files, prompts, logs, or chat.
 ## Residual risks
 
 - A currently running full-access Codex session keeps its launch-time authority until restarted.
+- Secret scanning reduces accidental commits but cannot revoke a credential, detect every custom
+  secret format, or protect values exposed outside tracked/reachable Git content.
 - Admin/root/kernel compromise, keyloggers, screen capture, and malicious reviewed binaries remain
   out of scope.
 - The interactive onboarding process still combines signing and the exact Technocore network
