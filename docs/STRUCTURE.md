@@ -115,7 +115,7 @@ immutable policy, state, the onboarding plan type, and the Technocore adapter
 
 ### Guarded refresh
 
-1. Launchd offers four six-hour calendar slots and starts the root-owned binary directly as
+1. launchd offers four six-hour calendar slots and starts the root-owned binary directly as
    `_floprefresh`; no shell, checkout path, `KeepAlive`, or `RunAtLoad` is in the plist
    ([ops plist](../ops/io.github.posaune0423.flop-agent.refresh.plist)). Sleep-time events coalesce
    into one wake-time run; shutdown time is not covered.
