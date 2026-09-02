@@ -52,25 +52,61 @@ After installing and hashing the exact reviewed files from a non-agent administr
 ```sh
 sudo launchctl bootstrap system \
   /Library/LaunchDaemons/io.github.posaune0423.flop-agent.refresh.plist
-service_pid="$(sudo launchctl kickstart -p system/io.github.posaune0423.flop-agent.refresh)"
+stdout_path=/var/db/flop-agent-refresh/runtime/stdout.log
+stderr_path=/var/db/flop-agent-refresh/runtime/stderr.log
+stdout_size="$(sudo stat -f %z "${stdout_path}" 2>/dev/null || printf '0')"
+stderr_size="$(sudo stat -f %z "${stderr_path}" 2>/dev/null || printf '0')"
+case "${stdout_size}:${stderr_size}" in
+  *[!0-9:]*) echo "invalid pre-run log size" >&2; exit 1 ;;
+esac
+if ! service_pid="$(sudo launchctl kickstart -p system/io.github.posaune0423.flop-agent.refresh)"; then
+  echo "launchctl kickstart failed" >&2
+  exit 1
+fi
+case "${service_pid}" in
+  ''|*[!0-9]*) echo "launchctl returned an invalid PID" >&2; exit 1 ;;
+esac
 attempts=0
 while sudo kill -0 "${service_pid}" 2>/dev/null; do
   attempts=$((attempts + 1))
-  if [ "${attempts}" -ge 60 ]; then
-    echo "guarded refresh did not exit within 60 seconds" >&2
+  if [ "${attempts}" -ge 180 ]; then
+    echo "guarded refresh did not exit within 180 seconds" >&2
     exit 1
   fi
   sleep 1
 done
+if ! stdout_delta="$(sudo tail -c "+$((stdout_size + 1))" "${stdout_path}")"; then
+  echo "could not read current stdout" >&2
+  exit 1
+fi
+if ! current_stderr_size="$(sudo stat -f %z "${stderr_path}" 2>/dev/null)"; then
+  echo "could not stat current stderr" >&2
+  exit 1
+fi
+case "${current_stderr_size}" in
+  ''|*[!0-9]*) echo "invalid current stderr size" >&2; exit 1 ;;
+esac
+if [ "${current_stderr_size}" -ne "${stderr_size}" ]; then
+  echo "current activation wrote to stderr" >&2
+  sudo tail -c "+$((stderr_size + 1))" "${stderr_path}" >&2
+  exit 1
+fi
+if ! status="$(printf '%s\n' "${stdout_delta}" | /usr/bin/plutil -extract status raw -o - - 2>/dev/null)"; then
+  echo "current stdout is not one valid result JSON object" >&2
+  exit 1
+fi
+case "${status}" in
+  refreshed|skipped) ;;
+  *) echo "unexpected guarded refresh status: ${status}" >&2; exit 1 ;;
+esac
 sudo launchctl print system/io.github.posaune0423.flop-agent.refresh
-sudo tail -n 1 /var/db/flop-agent-refresh/runtime/stdout.log
-sudo tail -n 1 /var/db/flop-agent-refresh/runtime/stderr.log
+printf '%s\n' "${stdout_delta}"
 ```
 
 Do not run these commands from Codex. Do not rely on the calendar slots until the kicked process has
-exited, `launchctl print` reports a successful last exit, the last stdout JSON has `status` equal to
-`refreshed` or `skipped`, and stderr contains no newer error. A `refreshed` result must also have
-its matching receipt and readback verified.
+exited, `launchctl print` reports a successful last exit, the JSON emitted by this activation has
+`status` equal to `refreshed` or `skipped`, and this activation wrote nothing to stderr. A
+`refreshed` result must also have its matching receipt and readback verified.
 
 ## Verification
 

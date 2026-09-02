@@ -36,11 +36,13 @@ flowchart LR
   binary -->|"CAS and readback of two notes"| technocore
 ```
 
-**図 1 — 実行可能な信頼境界。**
-可変のチェックアウトコードにはシークレットおよびネットワークの権限がなく、Technocore
-境界を越えられるのはレビュー済みで root によりインストールされた refresh
-バイナリだけです。スケジュールされた経路が暗号化済み identity vault
-に到達することもありません（[deno.json](../deno.json#L8-L13)、[src/constants/guarded_refresh.ts](../src/constants/guarded_refresh.ts)）。
+**図1 — スケジュール実行の信頼境界。**
+可変のチェックアウトコードにはシークレットおよびネットワークの権限がありません。
+スケジュール実行では、レビュー済みでrootによりインストールされたrefresh binaryだけがTechnocore
+境界を越えられ、暗号化済みidentity vaultへ到達するscheduled edgeはありません
+（[deno.json](../deno.json#L8-L13)、
+[src/constants/guarded_refresh.ts](../src/constants/guarded_refresh.ts)）。対話的onboardingは別の手動例外で、
+引き続きレビュー済みhelperとuser-present signingを必要とします。
 
 ## ディレクトリ構成
 

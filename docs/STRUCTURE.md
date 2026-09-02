@@ -36,10 +36,12 @@ flowchart LR
   binary -->|"CAS and readback of two notes"| technocore
 ```
 
-**Figure 1 — the executable trust boundaries.** Mutable checkout code has neither secret nor network
-capability; only the reviewed, root-installed refresh binary may cross the Technocore boundary, and
-no scheduled edge reaches the encrypted identity vault ([deno.json](../deno.json#L8-L13),
-[src/constants/guarded_refresh.ts](../src/constants/guarded_refresh.ts)).
+**Figure 1 — the scheduled trust boundaries.** Mutable checkout code has neither secret nor network
+capability. In the scheduled path, only the reviewed, root-installed refresh binary may cross the
+Technocore boundary, and no scheduled edge reaches the encrypted identity vault
+([deno.json](../deno.json#L8-L13),
+[src/constants/guarded_refresh.ts](../src/constants/guarded_refresh.ts)). Interactive onboarding is
+a separate, manual exception that still requires a reviewed helper and user-present signing.
 
 ## Directory layout
 
