@@ -52,10 +52,28 @@ After installing and hashing the exact reviewed files from a non-agent administr
 ```sh
 sudo launchctl bootstrap system \
   /Library/LaunchDaemons/io.github.posaune0423.flop-agent.refresh.plist
+if ! service_before="$(sudo launchctl print system/io.github.posaune0423.flop-agent.refresh)"; then
+  echo "could not inspect the loaded service" >&2
+  exit 1
+fi
+if printf '%s\n' "${service_before}" | /usr/bin/grep -q 'state = running'; then
+  echo "guarded refresh is already running; do not overlap activations" >&2
+  exit 1
+fi
+log_size() {
+  if sudo test -e "$1"; then
+    sudo stat -f %z "$1"
+  elif sudo test ! -e "$1"; then
+    printf '0'
+  else
+    echo "could not establish log existence: $1" >&2
+    return 1
+  fi
+}
 stdout_path=/var/db/flop-agent-refresh/runtime/stdout.log
 stderr_path=/var/db/flop-agent-refresh/runtime/stderr.log
-stdout_size="$(sudo stat -f %z "${stdout_path}" 2>/dev/null || printf '0')"
-stderr_size="$(sudo stat -f %z "${stderr_path}" 2>/dev/null || printf '0')"
+if ! stdout_size="$(log_size "${stdout_path}")"; then exit 1; fi
+if ! stderr_size="$(log_size "${stderr_path}")"; then exit 1; fi
 case "${stdout_size}:${stderr_size}" in
   *[!0-9:]*) echo "invalid pre-run log size" >&2; exit 1 ;;
 esac
