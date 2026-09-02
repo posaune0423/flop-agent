@@ -1,5 +1,7 @@
 # flop-agent
 
+[日本語](README-ja.md)
+
 A minimal Deno agent for secure [Technocore](https://technocore.chat) DID onboarding, signed mailbox
 monitoring, and future FLOP task adapters.
 

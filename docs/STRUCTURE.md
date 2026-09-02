@@ -1,5 +1,7 @@
 # STRUCTURE: flop-agent
 
+[日本語](STRUCTURE-ja.md)
+
 Updated: 2026-09-01
 
 ## Overview
@@ -34,10 +36,12 @@ flowchart LR
   binary -->|"CAS and readback of two notes"| technocore
 ```
 
-**Figure 1 — the executable trust boundaries.** Mutable checkout code has neither secret nor network
-capability; only the reviewed, root-installed refresh binary may cross the Technocore boundary, and
-no scheduled edge reaches the encrypted identity vault ([deno.json](../deno.json#L8-L13),
-[src/constants/guarded_refresh.ts](../src/constants/guarded_refresh.ts)).
+**Figure 1 — the scheduled trust boundaries.** Mutable checkout code has neither secret nor network
+capability. In the scheduled path, only the reviewed, root-installed refresh binary may cross the
+Technocore boundary, and no scheduled edge reaches the encrypted identity vault
+([deno.json](../deno.json#L8-L13),
+[src/constants/guarded_refresh.ts](../src/constants/guarded_refresh.ts)). Interactive onboarding is
+a separate, manual exception that still requires a reviewed helper and user-present signing.
 
 ## Directory layout
 
@@ -46,13 +50,17 @@ no scheduled edge reaches the encrypted identity vault ([deno.json](../deno.json
 ├── .gitleaks.toml                    narrow public DID fixture allowlist
 ├── AGENTS.md                         agent rules and required project context
 ├── README.md                         operator-facing overview
+├── README-ja.md                      Japanese operator-facing overview
 ├── deno.json                         imports, capability-scoped tasks, CI
 ├── docs/
 │   ├── AIRDROP_STRATEGY.md           evidence-backed FLOP strategy
 │   ├── SECURITY_GUARDRAILS.md        threat model and residual risks
-│   └── STRUCTURE.md                  this ownership map
+│   ├── SECURITY_GUARDRAILS-ja.md     Japanese threat model and residual risks
+│   ├── STRUCTURE.md                  this ownership map
+│   └── STRUCTURE-ja.md               Japanese ownership map
 ├── ops/
 │   ├── README.md                     human administrator install gate
+│   ├── README-ja.md                  Japanese administrator install gate
 │   ├── build/                        ignored compiled artifact output
 │   └── io.github...refresh.plist     LaunchDaemon definition
 ├── src/
@@ -210,6 +218,8 @@ The capability rules are executable regression tests, not only prose
 - Put isolated tests in `tests/unit/`, local multi-module tests in `tests/integration/`, and
   whole-repository or installed-boundary tests in `tests/e2e/`.
 - Add operator explanation under `docs/`; update `README.md` only for the short public entrypoint.
+- Keep `README-ja.md`, `docs/*-ja.md`, and `ops/README-ja.md` synchronized with their English
+  counterparts whenever operator-visible behavior, boundaries, or commands change.
 
 ## Verification entrypoints
 

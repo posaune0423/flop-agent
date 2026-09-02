@@ -1,5 +1,7 @@
 # Security Guardrails
 
+[日本語](SECURITY_GUARDRAILS-ja.md)
+
 Last verified: 2026-09-01 (Asia/Tokyo)
 
 ## Objective
